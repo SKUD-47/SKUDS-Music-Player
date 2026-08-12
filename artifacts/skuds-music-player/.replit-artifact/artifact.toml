@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Skuds Music Player"
+description = "A private, browser-based music player for importing, organizing, and playing the user's own audio files locally with playlists, favorites, queue controls, and persistent preferences."
+version = "1.0.0"
+id = "artifacts/skuds-music-player"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23423
+
+[services.development]
+run = "pnpm --filter @workspace/skuds-music-player run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/skuds-music-player", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/skuds-music-player/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23423"
+BASE_PATH = "/"

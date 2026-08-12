@@ -1,0 +1,540 @@
+Build me a polished personal music player web app called:
+
+"Skuds Music Player"
+
+IMPORTANT:
+This is a LOCAL music player. Do not connect to Spotify, YouTube, TIDAL, SoundCloud, or any other streaming service.
+
+The user provides their own audio files from their computer or USB drive.
+
+The app should run entirely in the browser for music playback.
+
+==================================================
+BRANDING
+==================================================
+
+App name:
+
+Skuds Music Player
+
+Use "Skuds Music Player" consistently throughout the UI, page title, browser title, and empty states.
+
+Create a simple custom music-player logo/icon using CSS or an inline SVG.
+
+Do not use copyrighted logos from Spotify, Apple Music, YouTube, etc.
+
+==================================================
+AI TRANSPARENCY
+==================================================
+
+Include a small, clearly visible disclaimer in the footer:
+
+"Made with AI assistance. Built and maintained by Skud."
+
+Also include an About section accessible from Settings or the sidebar.
+
+The About section should say:
+
+"Skuds Music Player is a personal, browser-based music player for audio files provided by the user.
+
+This application was developed with assistance from AI tools. The developer is responsible for the project's final implementation and maintenance.
+
+Your music stays on your device and is not uploaded by this application."
+
+Keep the disclaimer professional and unobtrusive.
+
+Do not imply that AI is a company, developer, or legal entity.
+
+==================================================
+CORE IDEA
+==================================================
+
+The workflow should be:
+
+USB drive / computer
+        ↓
+User clicks "Import Music"
+        ↓
+Browser file picker opens
+        ↓
+User selects audio files
+        ↓
+Songs appear in their library
+        ↓
+User creates playlists
+        ↓
+User plays the songs
+
+The app should NOT upload the user's music to a server.
+
+==================================================
+TECHNOLOGY
+==================================================
+
+Use:
+
+- React
+- Vite
+- TypeScript if useful
+- Modern CSS or Tailwind
+
+Do NOT create a complicated backend.
+
+Use the browser's HTML5 Audio API for playback.
+
+Use IndexedDB to persist imported music/library information locally in the browser.
+
+Do NOT store actual audio files in localStorage.
+
+==================================================
+IMPORT MUSIC
+==================================================
+
+Create a prominent button:
+
+"+ Import Music"
+
+When clicked, open the browser file picker.
+
+Allow multiple audio files to be selected.
+
+Support common formats:
+
+- MP3
+- WAV
+- M4A
+- AAC
+- OGG
+- FLAC when supported by the browser
+
+Also support drag-and-drop.
+
+The user should be able to drag music files onto the app and have them imported.
+
+IMPORTANT:
+
+A website cannot automatically access a USB drive.
+
+The user must explicitly select the files using the browser's file picker.
+
+If supported by the browser, also provide:
+
+"Import Folder"
+
+using directory selection.
+
+==================================================
+MUSIC METADATA
+==================================================
+
+Read embedded audio metadata when possible.
+
+Display:
+
+- Song title
+- Artist
+- Album
+- Album artwork
+- Duration
+
+If metadata is unavailable, use the filename as the song title.
+
+For example:
+
+"Blinding Lights.mp3"
+
+should display:
+
+Blinding Lights
+
+If possible, parse common filename formats such as:
+
+Artist - Song.mp3
+
+but don't break if the filename doesn't follow that format.
+
+==================================================
+MAIN UI
+==================================================
+
+Make the app look like a polished modern music player.
+
+Dark theme.
+
+Use:
+
+- Very dark background
+- Slightly lighter cards/sidebar
+- Green accent color
+- Rounded corners
+- Smooth hover animations
+- Clean typography
+- Large album artwork
+
+Desktop layout:
+
+------------------------------------------------
+SIDEBAR        MAIN CONTENT
+------------------------------------------------
+
+Skuds Music Player
+
+Home
+All Songs
+Favorites
+Playlists
+
++ New Playlist
+
+------------------------------------------------
+BOTTOM PLAYER
+------------------------------------------------
+
+[Album Art] Song Name
+           Artist
+
+        ◀   ▶/❚❚   ▶▶
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Volume     Shuffle     Repeat
+
+------------------------------------------------
+
+Make the UI responsive for smaller screens too.
+
+==================================================
+PAGES / SECTIONS
+==================================================
+
+Create these sections:
+
+HOME
+
+ALL SONGS
+
+FAVORITES
+
+PLAYLISTS
+
+SETTINGS
+
+ABOUT
+
+==================================================
+ALL SONGS
+==================================================
+
+Show imported songs in a clean list.
+
+Each row should contain:
+
+- Album artwork
+- Track number
+- Song name
+- Artist
+- Album
+- Duration
+- Favorite button
+- More/options button
+
+Clicking a song should immediately start playback.
+
+==================================================
+SEARCH
+==================================================
+
+Add a search bar.
+
+Search through:
+
+- Song title
+- Artist
+- Album
+
+Search results should update instantly.
+
+==================================================
+PLAYLISTS
+==================================================
+
+Allow users to create custom playlists.
+
+Features:
+
+- Create playlist
+- Rename playlist
+- Delete playlist
+- Add songs
+- Remove songs
+- Reorder songs
+- Play playlist
+- Shuffle playlist
+
+Users should be able to use a "..." menu on a song and select:
+
+"Add to playlist"
+
+==================================================
+FAVORITES
+==================================================
+
+Every song should have a heart button.
+
+Clicking it toggles favorite status.
+
+Create a Favorites section that automatically contains all favorited songs.
+
+==================================================
+MUSIC PLAYER
+==================================================
+
+Create a persistent bottom music player.
+
+Controls:
+
+- Previous
+- Play/Pause
+- Next
+- Shuffle
+- Repeat
+- Seek/progress bar
+- Volume
+- Current time
+- Total duration
+
+Clicking the progress bar should seek.
+
+When a song finishes:
+
+- Normal mode → play next song
+- Repeat song → replay current song
+- Repeat playlist → continue from beginning
+- Shuffle → choose a random song
+
+The music player should NOT restart when navigating between sections.
+
+==================================================
+QUEUE
+==================================================
+
+Add a queue system.
+
+Users should be able to:
+
+- Play next
+- Add to queue
+- Remove from queue
+- Clear queue
+
+Show the current queue in a panel.
+
+==================================================
+PERSISTENCE
+==================================================
+
+Use IndexedDB.
+
+The following should survive a page refresh:
+
+- Imported songs
+- Song metadata
+- Album artwork
+- Playlists
+- Favorites
+- Last played song
+- Volume setting
+- Playback preferences
+
+Do NOT upload music files to a server.
+
+The user's music should remain on their device.
+
+==================================================
+USB SUPPORT
+==================================================
+
+The intended use is:
+
+1. Plug USB drive into computer.
+2. Open Skuds Music Player.
+3. Click Import Music.
+4. Browse to the USB drive.
+5. Select songs.
+6. Import them.
+7. Create playlists.
+8. Listen.
+
+Do not claim that the website has unrestricted access to the USB drive.
+
+The user must choose the files/folder through the browser.
+
+==================================================
+EMPTY STATE
+==================================================
+
+If there are no songs:
+
+Show:
+
+"Your library is empty"
+
+"Import music from your computer or USB drive to get started."
+
+[ + Import Music ]
+
+==================================================
+SETTINGS
+==================================================
+
+Create a settings page with:
+
+- Clear music library
+- Clear playlists
+- Clear all local data
+- Theme toggle if easy
+- Volume setting
+
+Before deleting the entire library, show a confirmation dialog.
+
+Also display:
+
+"Your music stays on your device. This app does not upload your audio files."
+
+==================================================
+ABOUT
+==================================================
+
+Create an About page containing:
+
+Skuds Music Player
+
+"A personal browser-based music player for audio files provided by the user."
+
+Then display:
+
+"Made with AI assistance. Built and maintained by Skud."
+
+"This application was developed with assistance from AI tools. The developer is responsible for the project's final implementation and maintenance."
+
+"Your music stays on your device and is not uploaded by this application."
+
+Include the app version, for example:
+
+Version 1.0.0
+
+==================================================
+ERROR HANDLING
+==================================================
+
+Handle gracefully:
+
+- Unsupported audio format
+- Corrupt audio file
+- Missing metadata
+- Playback failure
+- Browser storage failure
+- Duplicate files
+
+Do not crash the app because one file is invalid.
+
+Show friendly error messages.
+
+==================================================
+DUPLICATES
+==================================================
+
+If the same song/file is imported twice, don't create obvious duplicates.
+
+Use a reasonable file identifier such as:
+
+name + size + lastModified
+
+to detect duplicates.
+
+==================================================
+PRIVACY
+==================================================
+
+Do not add:
+
+- Analytics
+- Tracking
+- Advertising
+- Spotify authentication
+- Streaming-service APIs
+- External music downloads
+
+The app should be a private local music player.
+
+==================================================
+IMPORTANT AUDIO RULE
+==================================================
+
+Only play audio files that the user explicitly imports into the application.
+
+Do NOT implement:
+
+- Spotify downloading
+- YouTube downloading
+- Stream ripping
+- DRM bypassing
+- Extracting streaming URLs
+- Proxying music from streaming services
+- Searching streaming services for downloadable audio
+
+==================================================
+QUALITY
+==================================================
+
+Make this feel like a real finished music application, not a basic demo.
+
+Add:
+
+- Loading states
+- Empty states
+- Toast notifications
+- Confirmation dialogs
+- Smooth transitions
+- Keyboard shortcuts where appropriate
+
+Useful keyboard shortcuts:
+
+Space = Play/Pause
+Left Arrow = Previous/seek backward
+Right Arrow = Next/seek forward
+Ctrl/Cmd + K = Search
+
+Make sure keyboard shortcuts don't interfere with typing in input boxes.
+
+==================================================
+FINAL TEST
+==================================================
+
+Before declaring the project finished, test the complete flow:
+
+1. Import several MP3 files.
+2. Verify metadata appears.
+3. Play a song.
+4. Pause/resume.
+5. Skip forward/back.
+6. Seek through the song.
+7. Change volume.
+8. Favorite a song.
+9. Create a playlist.
+10. Add songs to the playlist.
+11. Remove a song.
+12. Reorder playlist.
+13. Shuffle.
+14. Repeat.
+15. Search for a song.
+16. Refresh the page.
+17. Verify the library and playlists remain.
+18. Test drag-and-drop importing.
+19. Test importing files from a USB drive.
+20. Test an unsupported file and make sure the app doesn't crash.
+21. Verify the AI assistance disclaimer appears in the footer and About page.
+
+Build the actual functioning application, not a mockup.
+
+Do not stop at creating the UI. Implement the complete functionality.
