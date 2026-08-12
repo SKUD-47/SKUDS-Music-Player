@@ -13,6 +13,7 @@ export type StoredSong = {
   lastPlayedAt?: number;
   favorite: boolean;
   blob: Blob;
+  artwork?: Blob;
 };
 
 export type StoredPlaylist = {

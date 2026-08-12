@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import { parseBlob } from 'music-metadata-browser';
 import {
   clearAllLocalData, clearPlaylists, clearSettings, clearSongs, deletePlaylist, deleteSong, getPlaylists,
   getSetting, getSongs, savePlaylist, saveSong, setSetting, type StoredPlaylist, type StoredSong,
@@ -40,9 +41,44 @@ function getFilenameMetadata(filename: string) {
   return { title: parts.length > 1 ? parts.slice(1).join(' - ') : clean || 'Untitled track', artist: parts.length > 1 ? parts[0] : 'Unknown artist' };
 }
 
+async function findOnlineArtwork(title: string, artist: string, album: string) {
+  try {
+    const terms = [`recording:"${title}"`];
+    if (artist && artist !== 'Unknown artist') terms.push(`artist:"${artist}"`);
+    if (album && album !== 'Local file') terms.push(`release:"${album}"`);
+    const musicBrainzUrl = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(terms.join(' AND '))}&fmt=json&limit=1`;
+    const searchResponse = await fetch(musicBrainzUrl, { headers: { Accept: 'application/json' } });
+    if (!searchResponse.ok) return undefined;
+    const searchData = await searchResponse.json() as { recordings?: Array<{ releases?: Array<{ id?: string }> }> };
+    const releaseId = searchData.recordings?.[0]?.releases?.[0]?.id;
+    if (!releaseId) return undefined;
+    const artworkResponse = await fetch(`https://coverartarchive.org/release/${releaseId}/front-500`, { headers: { Accept: 'image/*' } });
+    if (!artworkResponse.ok) return undefined;
+    const artwork = await artworkResponse.blob();
+    return artwork.type.startsWith('image/') ? artwork : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function useObjectUrl(blob?: Blob) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    if (!blob) {
+      setUrl('');
+      return;
+    }
+    const nextUrl = URL.createObjectURL(blob);
+    setUrl(nextUrl);
+    return () => URL.revokeObjectURL(nextUrl);
+  }, [blob]);
+  return url;
+}
+
 function Artwork({ song, size = 'md' }: { song?: StoredSong; size?: 'sm' | 'md' | 'lg' | 'hero' }) {
   const initials = (song?.title ?? 'SKUDS').slice(0, 5).toUpperCase();
-  return <div className={`artwork artwork-${size} rounded-xl shrink-0`} aria-label={`${song?.title ?? 'Skuds Music Player'} artwork`}><span>{initials}</span></div>;
+  const artworkUrl = useObjectUrl(song?.artwork);
+  return <div className={`artwork artwork-${size} rounded-xl shrink-0 ${artworkUrl ? 'has-artwork' : ''}`} style={artworkUrl ? { backgroundImage: `url("${artworkUrl}")` } : undefined} aria-label={`${song?.title ?? 'Skuds Music Player'} artwork`}><span className={artworkUrl ? 'sr-only' : ''}>{initials}</span></div>;
 }
 
 function Logo({ compact = false }: { compact?: boolean }) {
