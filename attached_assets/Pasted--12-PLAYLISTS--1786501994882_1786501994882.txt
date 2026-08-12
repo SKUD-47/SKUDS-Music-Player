@@ -1,0 +1,207 @@
+==================================================
+12. PLAYLISTS
+==================================================
+
+Keep playlists visible in the sidebar.
+
+Example:
+
+Skuds Music Player
+
+Home
+All Songs
+Favorites
+
+Playlists
+Imported Music
+Workout
+Chill
+Road Trip
+
+- New Playlist
+
+Users should be able to:
+
+- Create playlist
+- Rename playlist
+- Delete playlist
+- Add songs
+- Remove songs
+- Reorder songs
+- Play playlist
+- Shuffle playlist
+
+New playlists should appear in the sidebar immediately without requiring a page refresh.
+
+==================================================
+13. PLAYLIST RENAMING
+==================================================
+
+Allow users to rename playlists.
+
+Add Rename to the playlist's "..." menu or another obvious control.
+
+Example:
+
+Imported Music
+
+becomes:
+
+Road Trip
+
+Save the new name to IndexedDB.
+
+The sidebar should immediately show the new name.
+
+==================================================
+14. KEEP MUSIC LOCAL
+==================================================
+
+This is still a LOCAL music player.
+
+Do NOT:
+
+- Upload music files to a server.
+- Upload music to Replit.
+- Stream music from Spotify.
+- Download music from Spotify.
+- Download music from YouTube.
+- Use streaming services as playback sources.
+- Require Spotify authentication.
+- Require Spotify Premium.
+- Add streaming functionality.
+- Replace the local HTML5 player with Spotify.
+
+The user's music should stay on their device.
+
+Use:
+
+- Browser File API
+- IndexedDB
+- HTML5 Audio API
+
+for local music handling/playback.
+
+The user must explicitly select files from their computer or USB drive.
+
+The website must NOT claim to have unrestricted access to the USB drive.
+
+==================================================
+15. INDEXEDDB
+==================================================
+
+Use IndexedDB for persistent local music data.
+
+Do NOT use localStorage for storing actual audio files.
+
+Persist:
+
+- Imported songs
+- Audio data needed for local playback
+- Song metadata
+- Album artwork
+- Edited metadata
+- Playlists
+- Favorites
+- Last played song
+- Volume
+- Playback preferences
+
+Everything should survive a page refresh.
+
+==================================================
+16. ERROR HANDLING
+==================================================
+
+Handle these gracefully:
+
+- Unsupported audio format
+- Corrupt audio file
+- Missing metadata
+- Missing artwork
+- Failed online lookup
+- Browser storage failure
+- Duplicate files
+- Playback failure
+
+If one file is invalid, do NOT stop the other valid files from importing.
+
+Show a friendly toast/error message instead.
+
+Do not crash the entire app.
+
+==================================================
+17. DUPLICATE FILES
+==================================================
+
+If the same file is imported multiple times, do not create obvious duplicates.
+
+Use a reasonable identifier such as:
+
+name + size + lastModified
+
+to detect duplicates.
+
+If a duplicate is detected, tell the user that it is already in the library instead of adding another copy.
+
+==================================================
+18. TEST THE ACTUAL FUNCTIONALITY
+==================================================
+
+Before considering this finished, test the following:
+
+1. Import exactly ONE MP3.
+2. Verify it appears in All Songs.
+3. VERIFY THAT NO PLAYLIST IS CREATED.
+4. Import 3 MP3s at once.
+5. Verify they are all added to the library.
+6. Verify they are treated as one import batch.
+7. Verify they are placed into one appropriate import playlist.
+8. Verify individual songs did NOT each become their own playlists.
+9. Import another single song.
+10. Verify that single song does NOT create another playlist.
+11. Test embedded metadata.
+12. Test embedded album artwork.
+13. Test a song without embedded artwork.
+14. Test online metadata/artwork lookup.
+15. Verify that if Spotify is used, ONLY an album-cover IMAGE is retrieved.
+16. Verify that NO Spotify player, Spotify audio, Spotify SDK, Spotify login, or Spotify UI is used.
+17. Verify that the imported local MP3 is still played using HTML5 Audio.
+18. Test a song with missing metadata.
+19. Edit the song title.
+20. Edit the artist.
+21. Edit the album.
+22. Edit the artwork.
+23. Remove artwork.
+24. Save changes.
+25. Refresh the browser.
+26. Verify all changes remain.
+27. Open Song Info and verify the updated information.
+28. Verify updated artwork appears everywhere.
+29. Test playlist rename.
+30. Test playlist deletion.
+31. Test adding/removing songs from playlists.
+32. Test the hamburger icon next to "PRIVATE LISTENING ROOM" / "Good to see you".
+33. Verify that it actually collapses/opens the sidebar.
+34. Verify music continues playing while navigating/collapsing the sidebar.
+35. Check the rest of the UI for clickable buttons that do nothing.
+
+IMPORTANT:
+
+Do not consider the task complete just because the UI exists.
+
+The underlying functionality must actually work.
+
+If the current implementation has an architectural problem preventing these features from working correctly, fix the underlying implementation rather than adding temporary workarounds.
+
+Keep the app polished, responsive, dark-themed, and consistent with the existing Skuds Music Player design.
+
+MOST IMPORTANT:
+
+Skuds Music Player is the music player.
+
+The user's local audio file is the audio source.
+
+Spotify, if used at all, is ONLY a possible source for album-cover IMAGES.
+
+NEVER use Spotify as the music player.

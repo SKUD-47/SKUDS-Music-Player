@@ -1,0 +1,315 @@
+==================================================
+4. PROPERLY READ MUSIC METADATA
+==================================================
+
+When importing a music file, properly inspect the file's embedded metadata/tags.
+
+Read as much information as possible, including:
+
+- Song title
+- Artist
+- Album
+- Album Artist
+- Genre
+- Year
+- Track number
+- Disc number
+- Duration
+- Embedded album artwork
+
+If the MP3/audio file already contains metadata, USE IT.
+
+Do not simply display the filename when useful metadata exists.
+
+For example:
+
+File:
+01 - Blinding Lights.mp3
+
+Embedded metadata:
+
+Title: Blinding Lights
+Artist: The Weeknd
+Album: After Hours
+
+The app should display the actual metadata.
+
+==================================================
+5. ALBUM ARTWORK — IMAGES ONLY
+==================================================
+
+The artwork system currently isn't working properly.
+
+Fix it so it actually tries to get the correct artwork.
+
+Use this priority:
+
+1. Embedded artwork inside the audio file.
+2. If there is no embedded artwork, try to find the correct artwork online using the available metadata.
+3. If Spotify is used as an artwork source, ONLY retrieve/use the album-cover IMAGE.
+4. If that fails, use a nice default Skuds Music Player artwork.
+
+If the MP3 already contains album artwork, ALWAYS prefer that artwork.
+
+Do not replace valid embedded artwork with an online image.
+
+The goal is to automatically find the correct album cover image for imported songs.
+
+Use the available:
+
+- Artist
+- Song title
+- Album
+- Album Artist
+
+to identify the correct release and artwork.
+
+Use your best technical judgment for the artwork/metadata services.
+
+MusicBrainz/Cover Art Archive or another appropriate music metadata/cover-art source is fine.
+
+Spotify may ONLY be used as a source of album-cover images.
+
+If Spotify is used:
+
+- Retrieve ONLY the album-cover image.
+- Do NOT retrieve/play audio.
+- Do NOT embed Spotify's player.
+- Do NOT use Spotify's Web Playback SDK.
+- Do NOT use Spotify playlists.
+- Do NOT use Spotify authentication.
+- Do NOT require Spotify Premium.
+- Do NOT display Spotify UI.
+- Do NOT redirect users to Spotify.
+
+The existing local player MUST remain in control of playback.
+
+The audio source must ALWAYS be the locally imported file.
+
+Example:
+
+Blinding Lights.mp3
+↓
+Read metadata:
+Artist = The Weeknd
+Album = After Hours
+↓
+Find matching cover image
+↓
+Save/display cover image
+↓
+Play the LOCAL Blinding Lights.mp3 using HTML5 Audio
+
+The user should never see or interact with a Spotify player.
+
+DO NOT make Spotify Premium or Spotify login a requirement.
+
+DO NOT use Spotify as the playback source.
+
+The purpose of online lookup is ONLY to improve metadata/artwork.
+
+The user's actual audio file must remain local.
+
+Do NOT upload the user's MP3/WAV/M4A/etc. to an external service just to identify it.
+
+You may use text metadata such as:
+
+Artist
+Song title
+Album
+
+for an online lookup.
+
+If online lookup fails, the song MUST still import normally.
+
+Never let an artwork lookup failure crash or block importing.
+
+Cache successfully retrieved artwork locally so the app doesn't repeatedly look it up.
+
+Cache the retrieved image in IndexedDB so it can also be used later without another lookup.
+
+==================================================
+6. SMART FILENAME FALLBACK
+==================================================
+
+If useful metadata is missing, use the filename as a fallback.
+
+Example:
+
+Blinding Lights.mp3
+
+should become:
+
+Title:
+Blinding Lights
+
+If the filename looks like:
+
+Artist - Song.mp3
+
+try to interpret it as:
+
+Artist:
+Artist
+
+Title:
+Song
+
+But do NOT assume every filename follows that format.
+
+Do not make up metadata when it isn't available.
+
+==================================================
+7. LET ME EDIT SONG INFORMATION
+==================================================
+
+Automatic metadata will not always be correct.
+
+Add an "Edit Song" option to the existing three-dot "..." song menu.
+
+The menu should contain options similar to:
+
+Play Next
+Add to Queue
+Add to Playlist
+Song Info
+Edit Song
+
+Clicking "Edit Song" should open a clean edit dialog.
+
+Allow me to edit:
+
+- Title
+- Artist
+- Album
+- Album Artist
+- Genre
+- Year
+- Track number
+- Disc number
+- Album artwork
+
+==================================================
+8. LET ME CHANGE ALBUM ARTWORK
+==================================================
+
+In the Edit Song dialog, let me manually change the artwork.
+
+Include:
+
+[ Change Artwork ]
+
+[ Remove Artwork ]
+
+I should be able to select an image from my computer.
+
+Support common image formats such as:
+
+- JPG/JPEG
+- PNG
+- WebP
+
+Allow me to preview the new artwork before saving.
+
+Save the artwork locally in IndexedDB.
+
+DO NOT modify the original MP3/audio file.
+
+These edits are changes to the Skuds Music Player library, not changes to the original music file.
+
+==================================================
+9. LET ME CHANGE THE ALBUM
+==================================================
+
+The Album field must be editable.
+
+If automatic detection says:
+
+Album:
+Unknown
+
+I should be able to change it to:
+
+Album:
+After Hours
+
+The same applies to:
+
+- Title
+- Artist
+- Album Artist
+- Genre
+- Year
+- Track
+- Disc
+- Artwork
+
+Save all changes.
+
+==================================================
+10. SONG INFO
+==================================================
+
+The existing three-dot menu should have a "Song Info" option.
+
+Clicking it should display a clean metadata dialog/panel.
+
+Show:
+
+- Album artwork
+- Title
+- Artist
+- Album
+- Album Artist
+- Genre
+- Year
+- Track number
+- Disc number
+- Duration
+- Filename
+- File type
+- File size
+
+Use appropriate UI icons next to the information.
+
+For example:
+
+[Music icon] Title
+Blinding Lights
+
+[Person icon] Artist
+The Weeknd
+
+[Album icon] Album
+After Hours
+
+[Calendar icon] Year
+2020
+
+[Music note icon] Genre
+Pop
+
+Make this look polished and consistent with the rest of Skuds Music Player.
+
+==================================================
+11. SAVE EDITED METADATA
+==================================================
+
+When I edit a song and press Save:
+
+Update the song everywhere immediately.
+
+The new information should appear in:
+
+- All Songs
+- Search results
+- Favorites
+- Playlists
+- Now Playing
+- Bottom player
+- Song Info
+- Any other place the song is displayed
+
+Save everything to IndexedDB.
+
+The changes MUST survive refreshing the page.

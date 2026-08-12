@@ -1,0 +1,723 @@
+Update the existing Skuds Music Player. DO NOT rebuild the app from scratch. Keep the existing design, functionality, and local-only architecture, but fix and improve the following things.
+
+IMPORTANT: Actually implement and test these features. Do not just create UI/buttons that look like they work.
+
+==================================================
+🚨 EXTREMELY IMPORTANT — SPOTIFY IS IMAGE-ONLY
+==================================================
+
+If Spotify is used at all, it is ONLY allowed as a possible SOURCE OF ALBUM COVER IMAGES.
+
+I ONLY WANT THE IMAGES.
+
+DO NOT USE THE SPOTIFY PLAYER.
+
+DO NOT EMBED THE SPOTIFY PLAYER.
+
+DO NOT PLAY MUSIC THROUGH SPOTIFY.
+
+DO NOT STREAM MUSIC THROUGH SPOTIFY.
+
+DO NOT USE SPOTIFY AUDIO.
+
+DO NOT USE SPOTIFY'S WEB PLAYBACK SDK.
+
+DO NOT ADD SPOTIFY LOGIN.
+
+DO NOT REQUIRE SPOTIFY PREMIUM.
+
+DO NOT REDIRECT THE USER TO SPOTIFY.
+
+DO NOT DISPLAY SPOTIFY'S PLAYER, CONTROLS, UI, OR BRANDING.
+
+DO NOT replace the existing HTML5/local audio player with Spotify.
+
+The user's imported MP3/audio file MUST ALWAYS be played locally by Skuds Music Player using the browser's HTML5 Audio API.
+
+If Spotify is used for artwork lookup, the ONLY thing that may be retrieved from Spotify is the album-cover IMAGE.
+
+The Spotify image should simply become normal album artwork inside Skuds Music Player.
+
+The user should NEVER see or interact with a Spotify player.
+
+Think of it like:
+
+LOCAL MP3
+↓
+Read title/artist/album
+↓
+Find matching album
+↓
+OPTIONALLY retrieve ONLY the album-cover IMAGE
+↓
+Display that image in Skuds Music Player
+↓
+LOCAL MP3 continues playing through HTML5 Audio
+
+NOT:
+
+LOCAL MP3
+↓
+Spotify
+↓
+Spotify Player
+↓
+Spotify Audio
+
+That is NOT allowed.
+
+The app must NEVER use Spotify as the audio source.
+
+==================================================
+1. FIX THE DUPLICATE ICON
+==================================================
+
+There are currently two icons/buttons that appear to represent the same thing.
+
+Remove the icon on the LEFT.
+
+Keep the other version.
+
+Do not replace it with another duplicate button.
+
+Make sure removing the left icon does not break any functionality.
+
+==================================================
+2. HAMBURGER MENU
+==================================================
+
+There is a hamburger/menu icon in the TOP-LEFT of the Home page.
+
+It is located directly next to the header containing:
+
+"PRIVATE LISTENING ROOM"
+
+and
+
+"Good to see you"
+
+This is the specific hamburger icon I am referring to.
+
+It is currently clickable but does nothing.
+
+MAKE THIS BUTTON ACTUALLY WORK.
+
+When clicked:
+
+- Desktop: collapse/expand the main sidebar.
+- Mobile/smaller screens: open/close the sidebar as a navigation drawer.
+- Add a smooth transition.
+- Give it an accessible label such as "Toggle sidebar".
+- If appropriate, change the icon between hamburger and X when the sidebar is open.
+- Do not remove this hamburger icon.
+- Do not affect music playback when opening/closing the sidebar.
+- Do not affect the bottom player.
+
+Also check the rest of the application for clickable-looking controls that currently do nothing.
+
+If a button/icon is supposed to do something, implement it.
+
+If it has no purpose, remove it rather than leaving a dead clickable control.
+
+==================================================
+3. FIX AUTOMATIC PLAYLIST CREATION
+==================================================
+
+The current behavior is WRONG:
+
+When I import ONE song, the app creates a playlist for that song.
+
+STOP DOING THIS.
+
+A SINGLE IMPORTED SONG MUST NEVER AUTOMATICALLY BECOME ITS OWN PLAYLIST.
+
+------------------------------------------
+IMPORTING 1 SONG
+------------------------------------------
+
+If I click:
+
+"+ Import Music"
+
+and select exactly ONE music file:
+
+Song A.mp3
+
+then:
+
+- Add Song A to All Songs.
+- Do NOT create a playlist.
+- Do NOT create "Imported Music" containing only Song A.
+- Do NOT create any automatic playlist.
+
+Example:
+
+All Songs
+└── Song A
+
+There should be NO new playlist.
+
+------------------------------------------
+IMPORTING MULTIPLE SONGS
+------------------------------------------
+
+If I select 2 or more songs in ONE import action:
+
+Song A.mp3
+Song B.mp3
+Song C.mp3
+
+then treat those files as ONE import batch.
+
+Create/use ONE appropriate import playlist:
+
+Imported Music
+├── Song A
+├── Song B
+└── Song C
+
+Do NOT create:
+
+Playlist 1 → Song A
+Playlist 2 → Song B
+Playlist 3 → Song C
+
+------------------------------------------
+IMPORTANT
+------------------------------------------
+
+The import action itself determines the batch.
+
+If I import one file, no automatic playlist.
+
+If I import multiple files together, one playlist can be created/used for that batch.
+
+If an "Imported Music" playlist already exists, reuse it instead of creating endless duplicate "Imported Music" playlists.
+
+The normal All Songs library should ALWAYS contain the imported songs independently of playlists.
+
+Do not make playlists the primary storage for imported music.
+
+==================================================
+4. PROPERLY READ MUSIC METADATA
+==================================================
+
+When importing a music file, properly inspect the file's embedded metadata/tags.
+
+Read as much information as possible, including:
+
+- Song title
+- Artist
+- Album
+- Album Artist
+- Genre
+- Year
+- Track number
+- Disc number
+- Duration
+- Embedded album artwork
+
+If the MP3/audio file already contains metadata, USE IT.
+
+Do not simply display the filename when useful metadata exists.
+
+For example:
+
+File:
+01 - Blinding Lights.mp3
+
+Embedded metadata:
+
+Title: Blinding Lights
+Artist: The Weeknd
+Album: After Hours
+
+The app should display the actual metadata.
+
+==================================================
+5. ALBUM ARTWORK — IMAGES ONLY
+==================================================
+
+The artwork system currently isn't working properly.
+
+Fix it so it actually tries to get the correct artwork.
+
+Use this priority:
+
+1. Embedded artwork inside the audio file.
+2. If there is no embedded artwork, try to find the correct artwork online using the available metadata.
+3. If Spotify is used as an artwork source, ONLY retrieve/use the album-cover IMAGE.
+4. If that fails, use a nice default Skuds Music Player artwork.
+
+If the MP3 already contains album artwork, ALWAYS prefer that artwork.
+
+Do not replace valid embedded artwork with an online image.
+
+The goal is to automatically find the correct album cover image for imported songs.
+
+Use the available:
+
+- Artist
+- Song title
+- Album
+- Album Artist
+
+to identify the correct release and artwork.
+
+Use your best technical judgment for the artwork/metadata services.
+
+MusicBrainz/Cover Art Archive or another appropriate music metadata/cover-art source is fine.
+
+Spotify may ONLY be used as a source of album-cover images.
+
+If Spotify is used:
+
+- Retrieve ONLY the album-cover image.
+- Do NOT retrieve/play audio.
+- Do NOT embed Spotify's player.
+- Do NOT use Spotify's Web Playback SDK.
+- Do NOT use Spotify playlists.
+- Do NOT use Spotify authentication.
+- Do NOT require Spotify Premium.
+- Do NOT display Spotify UI.
+- Do NOT redirect users to Spotify.
+
+The existing local player MUST remain in control of playback.
+
+The audio source must ALWAYS be the locally imported file.
+
+Example:
+
+Blinding Lights.mp3
+↓
+Read metadata:
+Artist = The Weeknd
+Album = After Hours
+↓
+Find matching cover image
+↓
+Save/display cover image
+↓
+Play the LOCAL Blinding Lights.mp3 using HTML5 Audio
+
+The user should never see or interact with a Spotify player.
+
+DO NOT make Spotify Premium or Spotify login a requirement.
+
+DO NOT use Spotify as the playback source.
+
+The purpose of online lookup is ONLY to improve metadata/artwork.
+
+The user's actual audio file must remain local.
+
+Do NOT upload the user's MP3/WAV/M4A/etc. to an external service just to identify it.
+
+You may use text metadata such as:
+
+Artist
+Song title
+Album
+
+for an online lookup.
+
+If online lookup fails, the song MUST still import normally.
+
+Never let an artwork lookup failure crash or block importing.
+
+Cache successfully retrieved artwork locally so the app doesn't repeatedly look it up.
+
+Cache the retrieved image in IndexedDB so it can also be used later without another lookup.
+
+==================================================
+6. SMART FILENAME FALLBACK
+==================================================
+
+If useful metadata is missing, use the filename as a fallback.
+
+Example:
+
+Blinding Lights.mp3
+
+should become:
+
+Title:
+Blinding Lights
+
+If the filename looks like:
+
+Artist - Song.mp3
+
+try to interpret it as:
+
+Artist:
+Artist
+
+Title:
+Song
+
+But do NOT assume every filename follows that format.
+
+Do not make up metadata when it isn't available.
+
+==================================================
+7. LET ME EDIT SONG INFORMATION
+==================================================
+
+Automatic metadata will not always be correct.
+
+Add an "Edit Song" option to the existing three-dot "..." song menu.
+
+The menu should contain options similar to:
+
+Play Next
+Add to Queue
+Add to Playlist
+Song Info
+Edit Song
+
+Clicking "Edit Song" should open a clean edit dialog.
+
+Allow me to edit:
+
+- Title
+- Artist
+- Album
+- Album Artist
+- Genre
+- Year
+- Track number
+- Disc number
+- Album artwork
+
+==================================================
+8. LET ME CHANGE ALBUM ARTWORK
+==================================================
+
+In the Edit Song dialog, let me manually change the artwork.
+
+Include:
+
+[ Change Artwork ]
+
+[ Remove Artwork ]
+
+I should be able to select an image from my computer.
+
+Support common image formats such as:
+
+- JPG/JPEG
+- PNG
+- WebP
+
+Allow me to preview the new artwork before saving.
+
+Save the artwork locally in IndexedDB.
+
+DO NOT modify the original MP3/audio file.
+
+These edits are changes to the Skuds Music Player library, not changes to the original music file.
+
+==================================================
+9. LET ME CHANGE THE ALBUM
+==================================================
+
+The Album field must be editable.
+
+If automatic detection says:
+
+Album:
+Unknown
+
+I should be able to change it to:
+
+Album:
+After Hours
+
+The same applies to:
+
+- Title
+- Artist
+- Album Artist
+- Genre
+- Year
+- Track
+- Disc
+- Artwork
+
+Save all changes.
+
+==================================================
+10. SONG INFO
+==================================================
+
+The existing three-dot menu should have a "Song Info" option.
+
+Clicking it should display a clean metadata dialog/panel.
+
+Show:
+
+- Album artwork
+- Title
+- Artist
+- Album
+- Album Artist
+- Genre
+- Year
+- Track number
+- Disc number
+- Duration
+- Filename
+- File type
+- File size
+
+Use appropriate UI icons next to the information.
+
+For example:
+
+[Music icon] Title
+Blinding Lights
+
+[Person icon] Artist
+The Weeknd
+
+[Album icon] Album
+After Hours
+
+[Calendar icon] Year
+2020
+
+[Music note icon] Genre
+Pop
+
+Make this look polished and consistent with the rest of Skuds Music Player.
+
+==================================================
+11. SAVE EDITED METADATA
+==================================================
+
+When I edit a song and press Save:
+
+Update the song everywhere immediately.
+
+The new information should appear in:
+
+- All Songs
+- Search results
+- Favorites
+- Playlists
+- Now Playing
+- Bottom player
+- Song Info
+- Any other place the song is displayed
+
+Save everything to IndexedDB.
+
+The changes MUST survive refreshing the page.
+
+==================================================
+12. PLAYLISTS
+==================================================
+
+Keep playlists visible in the sidebar.
+
+Example:
+
+Skuds Music Player
+
+Home
+All Songs
+Favorites
+
+Playlists
+Imported Music
+Workout
+Chill
+Road Trip
+
+- New Playlist
+
+Users should be able to:
+
+- Create playlist
+- Rename playlist
+- Delete playlist
+- Add songs
+- Remove songs
+- Reorder songs
+- Play playlist
+- Shuffle playlist
+
+New playlists should appear in the sidebar immediately without requiring a page refresh.
+
+==================================================
+13. PLAYLIST RENAMING
+==================================================
+
+Allow users to rename playlists.
+
+Add Rename to the playlist's "..." menu or another obvious control.
+
+Example:
+
+Imported Music
+
+becomes:
+
+Road Trip
+
+Save the new name to IndexedDB.
+
+The sidebar should immediately show the new name.
+
+==================================================
+14. KEEP MUSIC LOCAL
+==================================================
+
+This is still a LOCAL music player.
+
+Do NOT:
+
+- Upload music files to a server.
+- Upload music to Replit.
+- Stream music from Spotify.
+- Download music from Spotify.
+- Download music from YouTube.
+- Use streaming services as playback sources.
+- Require Spotify authentication.
+- Require Spotify Premium.
+- Add streaming functionality.
+- Replace the local HTML5 player with Spotify.
+
+The user's music should stay on their device.
+
+Use:
+
+- Browser File API
+- IndexedDB
+- HTML5 Audio API
+
+for local music handling/playback.
+
+The user must explicitly select files from their computer or USB drive.
+
+The website must NOT claim to have unrestricted access to the USB drive.
+
+==================================================
+15. INDEXEDDB
+==================================================
+
+Use IndexedDB for persistent local music data.
+
+Do NOT use localStorage for storing actual audio files.
+
+Persist:
+
+- Imported songs
+- Audio data needed for local playback
+- Song metadata
+- Album artwork
+- Edited metadata
+- Playlists
+- Favorites
+- Last played song
+- Volume
+- Playback preferences
+
+Everything should survive a page refresh.
+
+==================================================
+16. ERROR HANDLING
+==================================================
+
+Handle these gracefully:
+
+- Unsupported audio format
+- Corrupt audio file
+- Missing metadata
+- Missing artwork
+- Failed online lookup
+- Browser storage failure
+- Duplicate files
+- Playback failure
+
+If one file is invalid, do NOT stop the other valid files from importing.
+
+Show a friendly toast/error message instead.
+
+Do not crash the entire app.
+
+==================================================
+17. DUPLICATE FILES
+==================================================
+
+If the same file is imported multiple times, do not create obvious duplicates.
+
+Use a reasonable identifier such as:
+
+name + size + lastModified
+
+to detect duplicates.
+
+If a duplicate is detected, tell the user that it is already in the library instead of adding another copy.
+
+==================================================
+18. TEST THE ACTUAL FUNCTIONALITY
+==================================================
+
+Before considering this finished, test the following:
+
+1. Import exactly ONE MP3.
+2. Verify it appears in All Songs.
+3. VERIFY THAT NO PLAYLIST IS CREATED.
+4. Import 3 MP3s at once.
+5. Verify they are all added to the library.
+6. Verify they are treated as one import batch.
+7. Verify they are placed into one appropriate import playlist.
+8. Verify individual songs did NOT each become their own playlists.
+9. Import another single song.
+10. Verify that single song does NOT create another playlist.
+11. Test embedded metadata.
+12. Test embedded album artwork.
+13. Test a song without embedded artwork.
+14. Test online metadata/artwork lookup.
+15. Verify that if Spotify is used, ONLY an album-cover IMAGE is retrieved.
+16. Verify that NO Spotify player, Spotify audio, Spotify SDK, Spotify login, or Spotify UI is used.
+17. Verify that the imported local MP3 is still played using HTML5 Audio.
+18. Test a song with missing metadata.
+19. Edit the song title.
+20. Edit the artist.
+21. Edit the album.
+22. Edit the artwork.
+23. Remove artwork.
+24. Save changes.
+25. Refresh the browser.
+26. Verify all changes remain.
+27. Open Song Info and verify the updated information.
+28. Verify updated artwork appears everywhere.
+29. Test playlist rename.
+30. Test playlist deletion.
+31. Test adding/removing songs from playlists.
+32. Test the hamburger icon next to "PRIVATE LISTENING ROOM" / "Good to see you".
+33. Verify that it actually collapses/opens the sidebar.
+34. Verify music continues playing while navigating/collapsing the sidebar.
+35. Check the rest of the UI for clickable buttons that do nothing.
+
+IMPORTANT:
+
+Do not consider the task complete just because the UI exists.
+
+The underlying functionality must actually work.
+
+If the current implementation has an architectural problem preventing these features from working correctly, fix the underlying implementation rather than adding temporary workarounds.
+
+Keep the app polished, responsive, dark-themed, and consistent with the existing Skuds Music Player design.
+
+MOST IMPORTANT:
+
+Skuds Music Player is the music player.
+
+The user's local audio file is the audio source.
+
+Spotify, if used at all, is ONLY a possible source for album-cover IMAGES.
+
+NEVER use Spotify as the music player.

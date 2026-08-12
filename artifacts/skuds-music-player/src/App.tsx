@@ -1,8 +1,8 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle, Archive, ArrowLeft, ArrowRight, Check, ChevronRight, ChevronUp, CircleHelp, Disc3, Download, FileAudio, FolderOpen, Heart, Home as HomeIcon,
-  Info, Library, ListMusic, Menu, MoreHorizontal, Pause, Pencil, Play, Plus, Repeat, Repeat1, Search,
-  Settings as SettingsIcon, Shuffle, SkipBack, SkipForward, Trash2, Upload, Volume2, VolumeX, X, Music2,
+  CalendarDays, Clock3, FileText, Hash, Info, Library, ListMusic, Menu, MoreHorizontal, Pause, Pencil, Play, Plus, Repeat, Repeat1, Search,
+  Settings as SettingsIcon, Shuffle, SkipBack, SkipForward, Trash2, Upload, UserRound, Volume2, VolumeX, X, Music2,
 } from 'lucide-react';
 import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -41,10 +41,12 @@ function getFilenameMetadata(filename: string) {
   return { title: parts.length > 1 ? parts.slice(1).join(' - ') : clean || 'Untitled track', artist: parts.length > 1 ? parts[0] : 'Unknown artist' };
 }
 
-async function findOnlineArtwork(title: string, artist: string, album: string) {
+async function findOnlineArtwork(title: string, artist: string, album: string, albumArtist: string) {
   try {
     const terms = [`recording:"${title}"`];
-    if (artist && artist !== 'Unknown artist') terms.push(`artist:"${artist}"`);
+    const artists = [artist, albumArtist].filter((value, index, values) => value && value !== 'Unknown artist' && values.indexOf(value) === index);
+    if (artists.length === 1) terms.push(`artist:"${artists[0]}"`);
+    if (artists.length > 1) terms.push(`(${artists.map((value) => `artist:"${value}"`).join(' OR ')})`);
     if (album && album !== 'Local file') terms.push(`release:"${album}"`);
     const musicBrainzUrl = `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(terms.join(' AND '))}&fmt=json&limit=1`;
     const searchResponse = await fetch(musicBrainzUrl, { headers: { Accept: 'application/json' } });
@@ -147,7 +149,7 @@ type LibraryContextValue = {
   playSong: (id: string, collection?: string[]) => void; togglePlay: () => void; next: () => void; previous: () => void;
   seek: (value: number) => void; setVolume: (value: number) => void; setShuffle: (v: boolean) => void; cycleRepeat: () => void;
   toggleFavorite: (id: string) => void; addQueue: (id: string) => void; removeQueue: (id: string) => void; clearQueue: () => void;
-  updatePlaylist: (playlist: StoredPlaylist) => Promise<void>; createPlaylist: (name: string, initialSongId?: string) => Promise<void>;
+  updateSong: (song: StoredSong) => Promise<void>; updatePlaylist: (playlist: StoredPlaylist) => Promise<void>; createPlaylist: (name: string, initialSongId?: string) => Promise<void>;
   removePlaylist: (id: string) => Promise<void>; removeSong: (id: string) => Promise<void>;
   toasts: Toast[]; dismissToast: (id: number) => void; toast: (message: string, tone?: Toast['tone']) => void;
 };
@@ -276,34 +278,110 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   const setShuffle = useCallback((value: boolean) => setShuffleState(value), []);
   const cycleRepeat = useCallback(() => setRepeat((value) => value === 'off' ? 'all' : value === 'all' ? 'one' : 'off'), []);
 
+  const updateSong = useCallback(async (song: StoredSong) => {
+    await saveSong(song);
+    setSongs((items) => items.map((item) => item.id === song.id ? song : item));
+  }, []);
+
+  const enrichArtwork = useCallback((song: StoredSong) => {
+    if (song.artwork || song.artworkLocked) return;
+    void findOnlineArtwork(song.title, song.artist, song.album, song.albumArtist ?? '').then((artwork) => {
+      if (!artwork) return;
+      setSongs((items) => {
+        const latest = items.find((item) => item.id === song.id);
+        if (!latest || latest.artwork) return items;
+        const next = { ...latest, artwork };
+        void saveSong(next).catch(() => undefined);
+        return items.map((item) => item.id === song.id ? next : item);
+      });
+    });
+  }, []);
+
   const importFiles = useCallback(async (input: FileList | File[]) => {
     const files = Array.from(input);
     if (!files.length) return;
     let added = 0; let duplicates = 0; let rejected = 0;
+    const addedSongIds: string[] = [];
     const existingKeys = new Set(songs.map((song) => song.fileKey));
     for (const file of files) {
       if (!(ACCEPTED.includes(file.type) || EXTENSIONS.test(file.name))) { rejected++; continue; }
       const fileKey = `${file.name}|${file.size}|${file.lastModified}`;
       if (existingKeys.has(fileKey)) { duplicates++; continue; }
-      const metadata = getFilenameMetadata(file.name);
+      const fallback = getFilenameMetadata(file.name);
       const id = `${fileKey}-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
       let trackDuration = 0;
+      let embeddedArtwork: Blob | undefined;
+      let title = fallback.title;
+      let artist = fallback.artist;
+      let album = 'Local file';
+      let albumArtist = '';
+      let genre = '';
+      let year: number | undefined;
+      let trackNumber: number | undefined;
+      let discNumber: number | undefined;
       try {
-        const probeUrl = URL.createObjectURL(file);
-        trackDuration = await new Promise<number>((resolve) => {
-          const probe = document.createElement('audio');
-          probe.preload = 'metadata'; probe.src = probeUrl;
-          probe.onloadedmetadata = () => { URL.revokeObjectURL(probeUrl); resolve(Number.isFinite(probe.duration) ? probe.duration : 0); };
-          probe.onerror = () => { URL.revokeObjectURL(probeUrl); resolve(0); };
-        });
+        const parsed = await parseBlob(file);
+        const common = parsed.common;
+        title = common.title?.trim() || title;
+        artist = common.artist?.trim() || common.albumartist?.trim() || artist;
+        album = common.album?.trim() || album;
+        albumArtist = common.albumartist?.trim() || '';
+        genre = common.genre?.[0]?.trim() || '';
+        year = common.year;
+        trackNumber = common.track.no ?? undefined;
+        discNumber = common.disk.no ?? undefined;
+        trackDuration = parsed.format.duration ?? 0;
+        const picture = common.picture?.[0];
+        if (picture?.data?.length) {
+          const artworkBytes = picture.data.buffer.slice(picture.data.byteOffset, picture.data.byteOffset + picture.data.byteLength) as ArrayBuffer;
+          embeddedArtwork = new Blob([artworkBytes], { type: picture.format || 'image/jpeg' });
+        }
       } catch { /* metadata is optional */ }
-      const song: StoredSong = { id, fileKey, name: file.name, title: metadata.title, artist: metadata.artist, album: 'Local file', duration: trackDuration, size: file.size, lastModified: file.lastModified, type: file.type, addedAt: Date.now() + added, favorite: false, blob: file };
-      try { await saveSong(song); setSongs((items) => [song, ...items]); existingKeys.add(fileKey); added++; } catch { rejected++; }
+      if (!trackDuration) {
+        try {
+          const probeUrl = URL.createObjectURL(file);
+          trackDuration = await new Promise<number>((resolve) => {
+            const probe = document.createElement('audio');
+            probe.preload = 'metadata'; probe.src = probeUrl;
+            probe.onloadedmetadata = () => { URL.revokeObjectURL(probeUrl); resolve(Number.isFinite(probe.duration) ? probe.duration : 0); };
+            probe.onerror = () => { URL.revokeObjectURL(probeUrl); resolve(0); };
+          });
+        } catch { /* duration is optional */ }
+      }
+      const song: StoredSong = {
+        id, fileKey, name: file.name, title, artist, album, albumArtist, genre, year, trackNumber, discNumber,
+        duration: trackDuration, size: file.size, lastModified: file.lastModified, type: file.type,
+        addedAt: Date.now() + added, favorite: false, blob: file, artwork: embeddedArtwork,
+      };
+      try {
+        await saveSong(song);
+        setSongs((items) => [song, ...items]);
+        existingKeys.add(fileKey);
+        added++;
+        addedSongIds.push(id);
+        if (!embeddedArtwork) enrichArtwork(song);
+      } catch {
+        rejected++;
+      }
+    }
+    if (files.length >= 2 && addedSongIds.length > 1) {
+      const importedName = 'Imported Music';
+      const existing = playlists.find((playlist) => playlist.name.trim().toLowerCase() === importedName.toLowerCase());
+      const nextPlaylist: StoredPlaylist = existing
+        ? { ...existing, songIds: [...existing.songIds, ...addedSongIds.filter((id) => !existing.songIds.includes(id))], updatedAt: Date.now() }
+        : { id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2), name: importedName, songIds: addedSongIds, createdAt: Date.now(), updatedAt: Date.now() };
+      try {
+        await savePlaylist(nextPlaylist);
+        setPlaylists((items) => existing ? items.map((item) => item.id === existing.id ? nextPlaylist : item) : [nextPlaylist, ...items]);
+        toast(existing ? 'Added this import batch to “Imported Music”.' : 'Created “Imported Music” for this import batch.');
+      } catch {
+        toast('The tracks imported, but the import playlist could not be saved.', 'error');
+      }
     }
     if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
     if (rejected) toast(`${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`, 'error');
-  }, [songs, toast]);
+  }, [songs, playlists, toast, enrichArtwork]);
 
   const toggleFavorite = useCallback((id: string) => {
     setSongs((items) => { const nextSongs = items.map((song) => song.id === id ? { ...song, favorite: !song.favorite } : song); const changed = nextSongs.find((song) => song.id === id); if (changed) void saveSong(changed); return nextSongs; });
@@ -318,7 +396,7 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   const openImport = () => fileInputRef.current?.click();
   const openFolder = () => { const input = folderInputRef.current; if (!input) return; input.setAttribute('webkitdirectory', ''); input.setAttribute('directory', ''); input.click(); };
 
-  const value: LibraryContextValue = { songs, playlists, loading, storageError, currentId, isPlaying, progress, duration, volume, shuffle, repeat, queue, showQueue, setShowQueue, importFiles, openImport, openFolder, fileInputRef, folderInputRef, playSong, togglePlay, next, previous, seek, setVolume, setShuffle, cycleRepeat, toggleFavorite, addQueue, removeQueue, clearQueue, updatePlaylist, createPlaylist, removePlaylist, removeSong, toasts, dismissToast: (id) => setToasts((items) => items.filter((item) => item.id !== id)), toast };
+  const value: LibraryContextValue = { songs, playlists, loading, storageError, currentId, isPlaying, progress, duration, volume, shuffle, repeat, queue, showQueue, setShowQueue, importFiles, openImport, openFolder, fileInputRef, folderInputRef, playSong, togglePlay, next, previous, seek, setVolume, setShuffle, cycleRepeat, toggleFavorite, addQueue, removeQueue, clearQueue, updateSong, updatePlaylist, createPlaylist, removePlaylist, removeSong, toasts, dismissToast: (id) => setToasts((items) => items.filter((item) => item.id !== id)), toast };
   return <LibraryContext.Provider value={value}>{children}<audio aria-hidden="true" className="hidden"/><AppToasts toasts={toasts} dismiss={value.dismissToast}/></LibraryContext.Provider>;
 }
 
@@ -340,23 +418,25 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
   const [location] = useLocation();
   const library = useLibraryContext();
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const navItems = [{ href: '/', label: 'Home', icon: HomeIcon }, { href: '/songs', label: 'All Songs', icon: Library }, { href: '/favorites', label: 'Favorites', icon: Heart }, { href: '/playlists', label: 'Playlists', icon: ListMusic }];
   return <div className="min-h-[100dvh] bg-background text-foreground">
-    <aside className="desktop-sidebar fixed inset-y-0 left-0 z-30 flex w-[248px] flex-col border-r border-sidebar-border bg-sidebar px-5 py-6">
-      <Link href="/" className="mb-10 block"><Logo/></Link>
-      <div className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Your room</div>
-      <nav className="space-y-1">{navItems.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${location === href ? 'bg-primary/12 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}><NavIcon size={18} strokeWidth={location === href ? 2.4 : 1.8}/><span>{label}</span>{label === 'Favorites' && library.songs.filter((song) => song.favorite).length > 0 && <span className="ml-auto text-xs text-muted-foreground">{library.songs.filter((song) => song.favorite).length}</span>}</Link>)}</nav>
+    <aside className={`desktop-sidebar fixed inset-y-0 left-0 z-30 flex flex-col border-r border-sidebar-border bg-sidebar py-6 transition-[width,padding] duration-300 ${sidebarCollapsed ? 'w-[76px] px-3' : 'w-[248px] px-5'}`}>
+      <Link href="/" className="mb-10 block"><Logo compact={sidebarCollapsed}/></Link>
+      {!sidebarCollapsed && <div className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Your room</div>}
+      <nav className="space-y-1">{navItems.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} title={sidebarCollapsed ? label : undefined} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center' : ''} ${location === href ? 'bg-primary/12 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}><NavIcon size={18} strokeWidth={location === href ? 2.4 : 1.8}/>{!sidebarCollapsed && <span>{label}</span>}{!sidebarCollapsed && label === 'Favorites' && library.songs.filter((song) => song.favorite).length > 0 && <span className="ml-auto text-xs text-muted-foreground">{library.songs.filter((song) => song.favorite).length}</span>}</Link>)}</nav>
+      {!sidebarCollapsed && library.playlists.length > 0 && <div className="mt-8"><div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Playlists</div><div className="space-y-1">{library.playlists.map((playlist) => <Link key={playlist.id} href={`/playlists?playlist=${encodeURIComponent(playlist.id)}`} className="flex items-center gap-2 truncate rounded-xl px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70"/><span className="truncate">{playlist.name}</span></Link>)}</div></div>}
       <div className="my-8 h-px bg-sidebar-border"/>
-      <button type="button" onClick={() => onImport?.()} className="button-primary flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold"><Plus size={17}/> Import Music</button>
-      <Link href="/playlists" className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><ListMusic size={17}/> New playlist</Link>
-      <div className="mt-auto rounded-2xl border border-primary/15 bg-primary/[.045] p-4"><div className="flex items-center gap-2 text-xs font-semibold text-primary"><Archive size={14}/> Local-first</div><p className="mt-2 text-xs leading-5 text-muted-foreground">Your files stay in this browser. Nothing is uploaded.</p></div>
-      <nav className="mt-5 flex items-center gap-1"><Link href="/settings" className="button-ghost flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-xs"><SettingsIcon size={15}/> Settings</Link><Link href="/about" className="button-ghost flex items-center rounded-lg p-2" aria-label="About"><CircleHelp size={16}/></Link></nav>
+      <button type="button" onClick={() => onImport?.()} title={sidebarCollapsed ? 'Import Music' : undefined} className={`button-primary flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${sidebarCollapsed ? '' : ''}`}><Plus size={17}/>{!sidebarCollapsed && 'Import Music'}</button>
+      <Link href="/playlists?new=1" title={sidebarCollapsed ? 'New playlist' : undefined} className={`mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${sidebarCollapsed ? 'justify-center' : ''}`}><ListMusic size={17}/>{!sidebarCollapsed && 'New playlist'}</Link>
+      {!sidebarCollapsed && <div className="mt-auto rounded-2xl border border-primary/15 bg-primary/[.045] p-4"><div className="flex items-center gap-2 text-xs font-semibold text-primary"><Archive size={14}/> Local-first</div><p className="mt-2 text-xs leading-5 text-muted-foreground">Your files stay in this browser. Nothing is uploaded.</p></div>}
+      <nav className={`${sidebarCollapsed ? 'mt-auto' : 'mt-5'} flex items-center gap-1`}><Link href="/settings" title={sidebarCollapsed ? 'Settings' : undefined} className={`button-ghost flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${sidebarCollapsed ? 'justify-center' : 'flex-1'}`}><SettingsIcon size={15}/>{!sidebarCollapsed && 'Settings'}</Link><Link href="/about" className="button-ghost flex items-center rounded-lg p-2" aria-label="About" title={sidebarCollapsed ? 'About' : undefined}><CircleHelp size={16}/></Link></nav>
     </aside>
-    <div className="md:ml-[248px]">
+    <div className={sidebarCollapsed ? 'md:ml-[76px]' : 'md:ml-[248px]'}>
       <input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/>
       <input ref={library.folderInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/>
       <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl sm:px-8">
-        <div className="flex items-center gap-3"><button type="button" aria-label="Open navigation" className="button-icon md:hidden" onClick={() => setMobileMenu(true)}><Menu size={20}/></button><div><div className="text-[10px] font-bold uppercase tracking-[.22em] text-primary">{eyebrow ?? 'Private listening room'}</div><h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1></div></div>
+        <div className="flex items-center gap-3"><button type="button" aria-label={mobileMenu ? 'Close navigation' : 'Toggle sidebar'} title={mobileMenu ? 'Close navigation' : 'Toggle sidebar'} className="button-icon" onClick={() => { if (window.matchMedia('(max-width: 767px)').matches) setMobileMenu((open) => !open); else setSidebarCollapsed((collapsed) => !collapsed); }}>{mobileMenu ? <X size={20}/> : <Menu size={20}/>}</button><div><div className="text-[10px] font-bold uppercase tracking-[.22em] text-primary">{eyebrow ?? 'Private listening room'}</div><h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1></div></div>
         <div className="flex items-center gap-2">{onImport && <button type="button" onClick={onImport} className="button-primary hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold sm:flex"><Upload size={16}/> Import Music</button>}<Link href="/settings" className="button-ghost rounded-xl p-2.5" aria-label="Settings"><SettingsIcon size={19}/></Link></div>
       </header>
       {library.storageError && <div className="mx-4 mt-4 flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/10 p-3 text-sm text-accent sm:mx-8"><AlertCircle size={17} className="mt-0.5 shrink-0"/><span>{library.storageError}</span></div>}
@@ -364,7 +444,7 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
     </div>
     <MobileNav location={location}/>
     {mobileMenu && <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMobileMenu(false)}><div className="h-full w-[280px] border-r border-sidebar-border bg-sidebar p-5" onClick={(event) => event.stopPropagation()}><div className="mb-10 flex items-center justify-between"><Logo/><IconButton label="Close menu" onClick={() => setMobileMenu(false)}><X size={18}/></IconButton></div>{navItems.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} onClick={() => setMobileMenu(false)} className={`mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${location === href ? 'bg-primary/12 text-primary' : 'text-muted-foreground'}`}><NavIcon size={18}/>{label}</Link>)}<div className="my-5 h-px bg-sidebar-border"/><Link href="/settings" onClick={() => setMobileMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-muted-foreground"><SettingsIcon size={18}/>Settings</Link><Link href="/about" onClick={() => setMobileMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-muted-foreground"><CircleHelp size={18}/>About</Link></div></div>}
-    <BottomPlayer/>
+    <BottomPlayer sidebarCollapsed={sidebarCollapsed}/>
   </div>;
 }
 
@@ -373,13 +453,13 @@ function MobileNav({ location }: { location: string }) {
   return <nav className="mobile-nav fixed bottom-0 left-0 right-0 z-30 h-[68px] items-center justify-around border-t border-border bg-sidebar/95 px-2 backdrop-blur-xl">{items.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} aria-label={label} className={`flex min-w-[62px] flex-col items-center gap-1 rounded-xl py-2 text-[10px] ${location === href ? 'text-primary' : 'text-muted-foreground'}`}><NavIcon size={18}/><span>{label}</span></Link>)}</nav>;
 }
 
-function BottomPlayer() {
+function BottomPlayer({ sidebarCollapsed = false }: { sidebarCollapsed?: boolean }) {
   const library = useLibraryContext();
   const current = library.songs.find((song) => song.id === library.currentId);
   const [expanded, setExpanded] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
   const max = library.duration || current?.duration || 1;
-  return <><div className="fixed bottom-0 left-0 right-0 z-40 border-t border-primary/15 bg-[#0b1610]/95 shadow-[0_-12px_40px_rgba(0,0,0,.25)] backdrop-blur-xl md:left-[248px]"><div className="mx-auto max-w-[1500px] px-3 py-2 sm:px-6"><div className="flex items-center gap-3"><div className="flex min-w-0 flex-1 items-center gap-3"><Artwork song={current} size="sm"/><div className="min-w-0 player-desktop-details"><div className="truncate text-sm font-semibold">{current?.title ?? 'Choose a track to begin'}</div><div className="truncate text-xs text-muted-foreground">{current?.artist ?? 'Your private library awaits'}</div></div></div><div className="flex items-center gap-0.5 sm:gap-2"><IconButton label="Previous track" onClick={library.previous} disabled={!current}><SkipBack size={17}/></IconButton><button type="button" aria-label={library.isPlaying ? 'Pause' : 'Play'} data-testid="button-player-play" onClick={library.togglePlay} className="green-glow flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105">{library.isPlaying ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor" className="ml-0.5"/>}</button><IconButton label="Next track" onClick={library.next} disabled={!current}><SkipForward size={17}/></IconButton></div><div className="hidden min-w-[210px] flex-1 items-center justify-end gap-3 sm:flex"><IconButton label="Shuffle" onClick={() => library.setShuffle(!library.shuffle)} active={library.shuffle}><Shuffle size={16}/></IconButton><IconButton label={`Repeat ${library.repeat}`} onClick={library.cycleRepeat} active={library.repeat !== 'off'}>{library.repeat === 'one' ? <Repeat1 size={16}/> : <Repeat size={16}/>}</IconButton><IconButton label="Open queue" onClick={() => library.setShowQueue(true)} active={library.showQueue}><ListMusic size={17}/></IconButton><IconButton label="Track information" onClick={() => setShowMetadata(true)} disabled={!current}><Info size={16}/></IconButton><IconButton label="Expand player" onClick={() => setExpanded(true)}><ChevronUpSafe/></IconButton></div><button type="button" onClick={() => setShowMetadata(true)} className="button-icon sm:hidden" aria-label="Track information" disabled={!current}><Info size={17}/></button></div><div className="mt-2 flex items-center gap-2"><span className="w-8 text-right font-mono text-[10px] text-muted-foreground">{formatTime(library.progress)}</span><input aria-label="Seek" data-testid="input-player-seek" type="range" className="progress-track min-w-0 flex-1" min="0" max={max} step=".1" value={Math.min(library.progress, max)} onChange={(event) => library.seek(Number(event.target.value))}/><span className="w-8 font-mono text-[10px] text-muted-foreground">{formatTime(max)}</span></div><div className="mt-2 flex items-center justify-end gap-2"><VolumeX size={13} className="text-muted-foreground"/><input aria-label="Player volume" data-testid="input-player-volume" type="range" min="0" max="1" step=".01" value={library.volume} onChange={(event) => library.setVolume(Number(event.target.value))} className="volume-track w-28 sm:w-36"/><Volume2 size={13} className="text-muted-foreground"/></div></div></div>{library.showQueue && <QueuePanel/>}{expanded && <ExpandedPlayer onClose={() => setExpanded(false)}/>} {showMetadata && current && <MetadataDialog song={current} onClose={() => setShowMetadata(false)}/>}</>;
+  return <><div className={`fixed bottom-0 left-0 right-0 z-40 border-t border-primary/15 bg-[#0b1610]/95 shadow-[0_-12px_40px_rgba(0,0,0,.25)] backdrop-blur-xl ${sidebarCollapsed ? 'md:left-[76px]' : 'md:left-[248px]'}`}><div className="mx-auto max-w-[1500px] px-3 py-2 sm:px-6"><div className="flex items-center gap-3"><div className="flex min-w-0 flex-1 items-center gap-3"><Artwork song={current} size="sm"/><div className="min-w-0 player-desktop-details"><div className="truncate text-sm font-semibold">{current?.title ?? 'Choose a track to begin'}</div><div className="truncate text-xs text-muted-foreground">{current?.artist ?? 'Your private library awaits'}</div></div></div><div className="flex items-center gap-0.5 sm:gap-2"><IconButton label="Previous track" onClick={library.previous} disabled={!current}><SkipBack size={17}/></IconButton><button type="button" aria-label={library.isPlaying ? 'Pause' : 'Play'} data-testid="button-player-play" onClick={library.togglePlay} className="green-glow flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105">{library.isPlaying ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor" className="ml-0.5"/>}</button><IconButton label="Next track" onClick={library.next} disabled={!current}><SkipForward size={17}/></IconButton></div><div className="hidden min-w-[210px] flex-1 items-center justify-end gap-3 sm:flex"><IconButton label="Shuffle" onClick={() => library.setShuffle(!library.shuffle)} active={library.shuffle}><Shuffle size={16}/></IconButton><IconButton label={`Repeat ${library.repeat}`} onClick={library.cycleRepeat} active={library.repeat !== 'off'}>{library.repeat === 'one' ? <Repeat1 size={16}/> : <Repeat size={16}/>}</IconButton><IconButton label="Open queue" onClick={() => library.setShowQueue(true)} active={library.showQueue}><ListMusic size={17}/></IconButton><IconButton label="Track information" onClick={() => setShowMetadata(true)} disabled={!current}><Info size={16}/></IconButton><IconButton label="Expand player" onClick={() => setExpanded(true)}><ChevronUpSafe/></IconButton></div></div><div className="mt-2 flex items-center gap-2"><span className="w-8 text-right font-mono text-[10px] text-muted-foreground">{formatTime(library.progress)}</span><input aria-label="Seek" data-testid="input-player-seek" type="range" className="progress-track min-w-0 flex-1" min="0" max={max} step=".1" value={Math.min(library.progress, max)} onChange={(event) => library.seek(Number(event.target.value))}/><span className="w-8 font-mono text-[10px] text-muted-foreground">{formatTime(max)}</span></div><div className="mt-2 flex items-center justify-end gap-2"><VolumeX size={13} className="text-muted-foreground"/><input aria-label="Player volume" data-testid="input-player-volume" type="range" min="0" max="1" step=".01" value={library.volume} onChange={(event) => library.setVolume(Number(event.target.value))} className="volume-track w-28 sm:w-36"/><Volume2 size={13} className="text-muted-foreground"/></div></div></div>{library.showQueue && <QueuePanel/>}{expanded && <ExpandedPlayer onClose={() => setExpanded(false)}/>} {showMetadata && current && <MetadataDialog song={current} onClose={() => setShowMetadata(false)}/>}</>;
 }
 
 function ChevronUpSafe() { return <ChevronUp size={17}/>; }
@@ -399,15 +479,78 @@ function ExpandedPlayer({ onClose }: { onClose: () => void }) {
 
 function MetadataDialog({ song, onClose }: { song: StoredSong; onClose: () => void }) {
   const details = [
-    ['Title', song.title],
-    ['Artist', song.artist],
-    ['Album', song.album],
-    ['File name', song.name],
-    ['Format', song.type || 'Unknown format'],
-    ['Duration', formatTime(song.duration)],
-    ['File size', formatFileSize(song.size)],
+    ['Title', song.title, Music2],
+    ['Artist', song.artist, UserRound],
+    ['Album', song.album, Disc3],
+    ['Album artist', song.albumArtist || 'Unknown', UserRound],
+    ['Genre', song.genre || 'Unknown', Music2],
+    ['Year', song.year?.toString() || 'Unknown', CalendarDays],
+    ['Track number', song.trackNumber?.toString() || 'Unknown', Hash],
+    ['Disc number', song.discNumber?.toString() || 'Unknown', Disc3],
+    ['Duration', formatTime(song.duration), Clock3],
+    ['Filename', song.name, FileText],
+    ['File type', song.type || 'Unknown format', FileAudio],
+    ['File size', formatFileSize(song.size), Archive],
+  ] as const;
+  return <Dialog title="Song info" onClose={onClose} footer={<button type="button" onClick={onClose} className="button-primary rounded-xl px-4 py-2 text-sm font-semibold">Done</button>}><div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3"><Artwork song={song} size="sm"/><div className="min-w-0"><div className="truncate text-sm font-semibold">{song.title}</div><div className="truncate text-xs text-muted-foreground">{song.artist}</div></div></div><div className="mt-4 divide-y divide-border rounded-xl border border-border">{details.map(([label, value, Icon]) => <div key={label} className="flex items-start gap-3 px-3 py-2.5 text-xs"><Icon size={14} className="mt-0.5 shrink-0 text-primary"/><span className="text-muted-foreground">{label}</span><span className="ml-auto max-w-[55%] break-words text-right font-medium text-foreground">{value}</span></div>)}</div></Dialog>;
+}
+
+function EditSongDialog({ song, onClose }: { song: StoredSong; onClose: () => void }) {
+  const library = useLibraryContext();
+  const artworkInputRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState({
+    title: song.title,
+    artist: song.artist,
+    album: song.album,
+    albumArtist: song.albumArtist ?? '',
+    genre: song.genre ?? '',
+    year: song.year?.toString() ?? '',
+    trackNumber: song.trackNumber?.toString() ?? '',
+    discNumber: song.discNumber?.toString() ?? '',
+  });
+  const [artwork, setArtwork] = useState<Blob | undefined>(song.artwork);
+  const [saving, setSaving] = useState(false);
+  const artworkUrl = useObjectUrl(artwork);
+  const setField = (field: keyof typeof form, value: string) => setForm((current) => ({ ...current, [field]: value }));
+  const optionalNumber = (value: string) => {
+    const parsed = Number(value);
+    return value.trim() && Number.isFinite(parsed) ? parsed : undefined;
+  };
+  const save = async () => {
+    setSaving(true);
+    try {
+      await library.updateSong({
+        ...song,
+        title: form.title.trim() || 'Untitled track',
+        artist: form.artist.trim() || 'Unknown artist',
+        album: form.album.trim() || 'Local file',
+        albumArtist: form.albumArtist.trim(),
+        genre: form.genre.trim(),
+        year: optionalNumber(form.year),
+        trackNumber: optionalNumber(form.trackNumber),
+        discNumber: optionalNumber(form.discNumber),
+        artwork,
+        artworkLocked: artwork !== song.artwork ? true : song.artworkLocked,
+      });
+      library.toast('Song information updated.');
+      onClose();
+    } catch {
+      library.toast('The song could not be updated.', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+  const fields: Array<[keyof typeof form, string, string]> = [
+    ['title', 'Title', 'Blinding Lights'],
+    ['artist', 'Artist', 'The Weeknd'],
+    ['album', 'Album', 'After Hours'],
+    ['albumArtist', 'Album artist', 'The Weeknd'],
+    ['genre', 'Genre', 'Pop'],
+    ['year', 'Year', '2020'],
+    ['trackNumber', 'Track number', '1'],
+    ['discNumber', 'Disc number', '1'],
   ];
-  return <Dialog title="Track information" onClose={onClose} footer={<button type="button" onClick={onClose} className="button-primary rounded-xl px-4 py-2 text-sm font-semibold">Done</button>}><div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3"><Artwork song={song} size="sm"/><div className="min-w-0"><div className="truncate text-sm font-semibold">{song.title}</div><div className="truncate text-xs text-muted-foreground">{song.artist}</div></div></div><div className="mt-4 divide-y divide-border rounded-xl border border-border">{details.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 px-3 py-2.5 text-xs"><span className="text-muted-foreground">{label}</span><span className="max-w-[65%] break-words text-right font-medium text-foreground">{value}</span></div>)}</div></Dialog>;
+  return <Dialog title="Edit song" onClose={onClose} footer={<><button type="button" onClick={onClose} className="button-ghost rounded-xl px-4 py-2 text-sm">Cancel</button><button type="button" disabled={saving} onClick={() => void save()} className="button-primary rounded-xl px-4 py-2 text-sm font-semibold">{saving ? 'Saving…' : 'Save changes'}</button></>}><div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3"><div className="relative shrink-0">{artworkUrl ? <div className="artwork artwork-sm has-artwork rounded-xl" style={{ backgroundImage: `url("${artworkUrl}")` }}/> : <Artwork song={song} size="sm"/>}</div><div className="min-w-0"><div className="truncate text-sm font-semibold">{form.title || 'Untitled track'}</div><div className="truncate text-xs text-muted-foreground">{form.artist || 'Unknown artist'}</div></div></div><div className="mt-4 grid gap-3 sm:grid-cols-2">{fields.map(([field, label, placeholder]) => <label key={field} className="text-xs font-medium text-muted-foreground"><span>{label}</span><input type={['year', 'trackNumber', 'discNumber'].includes(field) ? 'number' : 'text'} min={['year', 'trackNumber', 'discNumber'].includes(field) ? 0 : undefined} value={form[field]} onChange={(event) => setField(field, event.target.value)} placeholder={placeholder} className="mt-1 h-10 w-full rounded-xl border border-border bg-muted/50 px-3 text-sm text-foreground outline-none focus:border-primary"/></label>)}</div><input ref={artworkInputRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { const file = event.target.files?.[0]; if (file) setArtwork(file); event.target.value = ''; }}/><div className="mt-4 rounded-xl border border-border p-3"><div className="text-xs font-semibold">Album artwork</div><p className="mt-1 text-xs text-muted-foreground">Artwork changes are saved to this browser only; the original audio file stays untouched.</p><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => artworkInputRef.current?.click()} className="button-ghost rounded-lg border border-border px-3 py-2 text-xs font-semibold">Change artwork</button><button type="button" disabled={!artwork} onClick={() => setArtwork(undefined)} className="button-ghost rounded-lg border border-border px-3 py-2 text-xs font-semibold text-destructive">Remove artwork</button>{artworkUrl && <span className="self-center text-xs text-primary">Preview ready</span>}</div></div></Dialog>;
 }
 
 function HomePage() {
@@ -436,15 +579,17 @@ function TrackList({ songs, compact = false, menuId, setMenuId, onAddPlaylist }:
   const library = useLibraryContext();
   const [localMenuId, setLocalMenuId] = useState<string | null>(null);
   const [localPlaylistSong, setLocalPlaylistSong] = useState<StoredSong | null>(null);
+  const [infoSong, setInfoSong] = useState<StoredSong | null>(null);
+  const [editSong, setEditSong] = useState<StoredSong | null>(null);
   const activeMenuId = menuId ?? localMenuId;
   const updateMenu = setMenuId ?? setLocalMenuId;
   const openPlaylistDialog = onAddPlaylist ?? setLocalPlaylistSong;
-  return <><div className={`mt-5 overflow-visible rounded-2xl border border-border bg-card/70 ${compact ? '' : ''}`}><div className="hidden grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] gap-3 border-b border-border px-4 py-3 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground sm:grid"><span>#</span><span>Track</span><span>Artist</span><span>Album</span><span>Time</span><span/></div>{songs.map((song, index) => <div key={song.id} className="list-row group relative grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2.5 last:border-0 sm:grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] sm:gap-3 sm:px-4"><span className="text-center font-mono text-xs text-muted-foreground">{index + 1}</span><button type="button" data-testid={`button-play-song-${song.id}`} onClick={() => library.playSong(song.id, songs.map((item) => item.id))} className="flex min-w-0 items-center gap-3 text-left"><Artwork song={song} size="sm"/><span className="min-w-0"><span className="block truncate text-sm font-semibold">{song.title}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground sm:hidden">{song.artist}</span></span></button><div className="hidden truncate text-sm text-muted-foreground sm:block">{song.artist}</div><div className="hidden truncate text-sm text-muted-foreground sm:block">{song.album}</div><span className="hidden font-mono text-xs text-muted-foreground sm:block">{formatTime(song.duration)}</span><div className="flex items-center justify-end gap-0.5"><IconButton label={song.favorite ? `Unfavorite ${song.title}` : `Favorite ${song.title}`} onClick={() => library.toggleFavorite(song.id)} active={song.favorite} className={song.favorite ? 'text-primary' : 'opacity-50 group-hover:opacity-100'}><Heart size={16} fill={song.favorite ? 'currentColor' : 'none'}/></IconButton><div className="relative"><IconButton label={`Options for ${song.title}`} onClick={() => updateMenu(activeMenuId === song.id ? null : song.id)}><MoreHorizontal size={17}/></IconButton>{activeMenuId === song.id && <TrackMenu song={song} onClose={() => updateMenu(null)} onAddPlaylist={() => openPlaylistDialog(song)}/>}</div></div></div>)}</div>{localPlaylistSong && <AddToPlaylistDialog song={localPlaylistSong} onClose={() => setLocalPlaylistSong(null)}/>}</>;
+  return <><div className={`mt-5 overflow-visible rounded-2xl border border-border bg-card/70 ${compact ? '' : ''}`}><div className="hidden grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] gap-3 border-b border-border px-4 py-3 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground sm:grid"><span>#</span><span>Track</span><span>Artist</span><span>Album</span><span>Time</span><span/></div>{songs.map((song, index) => <div key={song.id} className="list-row group relative grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2.5 last:border-0 sm:grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] sm:gap-3 sm:px-4"><span className="text-center font-mono text-xs text-muted-foreground">{index + 1}</span><button type="button" data-testid={`button-play-song-${song.id}`} onClick={() => library.playSong(song.id, songs.map((item) => item.id))} className="flex min-w-0 items-center gap-3 text-left"><Artwork song={song} size="sm"/><span className="min-w-0"><span className="block truncate text-sm font-semibold">{song.title}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground sm:hidden">{song.artist}</span></span></button><div className="hidden truncate text-sm text-muted-foreground sm:block">{song.artist}</div><div className="hidden truncate text-sm text-muted-foreground sm:block">{song.album}</div><span className="hidden font-mono text-xs text-muted-foreground sm:block">{formatTime(song.duration)}</span><div className="flex items-center justify-end gap-0.5"><IconButton label={song.favorite ? `Unfavorite ${song.title}` : `Favorite ${song.title}`} onClick={() => library.toggleFavorite(song.id)} active={song.favorite} className={song.favorite ? 'text-primary' : 'opacity-50 group-hover:opacity-100'}><Heart size={16} fill={song.favorite ? 'currentColor' : 'none'}/></IconButton><div className="relative"><IconButton label={`Options for ${song.title}`} onClick={() => updateMenu(activeMenuId === song.id ? null : song.id)}><MoreHorizontal size={17}/></IconButton>{activeMenuId === song.id && <TrackMenu song={song} onClose={() => updateMenu(null)} onAddPlaylist={() => openPlaylistDialog(song)} onInfo={() => setInfoSong(song)} onEdit={() => setEditSong(song)}/>}</div></div></div>)}</div>{localPlaylistSong && <AddToPlaylistDialog song={localPlaylistSong} onClose={() => setLocalPlaylistSong(null)}/>} {infoSong && <MetadataDialog song={infoSong} onClose={() => setInfoSong(null)}/>} {editSong && <EditSongDialog song={editSong} onClose={() => setEditSong(null)}/>}</>;
 }
 
-function TrackMenu({ song, onClose, onAddPlaylist }: { song: StoredSong; onClose: () => void; onAddPlaylist: () => void }) {
+function TrackMenu({ song, onClose, onAddPlaylist, onInfo, onEdit }: { song: StoredSong; onClose: () => void; onAddPlaylist: () => void; onInfo: () => void; onEdit: () => void }) {
   const library = useLibraryContext();
-  return <div className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl"><button type="button" onClick={() => { library.playSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Play size={14}/> Play now</button><button type="button" onClick={() => { library.addQueue(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><ListMusic size={14}/> Add to queue</button><button type="button" onClick={() => { onAddPlaylist(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Plus size={14}/> Add to playlist</button><button type="button" onClick={() => { void library.removeSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"><Trash2 size={14}/> Remove track</button></div>;
+  return <div className="absolute right-0 top-10 z-20 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl"><button type="button" onClick={() => { library.playSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Play size={14}/> Play now</button><button type="button" onClick={() => { library.addQueue(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><ListMusic size={14}/> Add to queue</button><button type="button" onClick={() => { onAddPlaylist(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Plus size={14}/> Add to playlist</button><button type="button" onClick={() => { onInfo(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Info size={14}/> Song info</button><button type="button" onClick={() => { onEdit(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Pencil size={14}/> Edit song</button><button type="button" onClick={() => { void library.removeSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"><Trash2 size={14}/> Remove track</button></div>;
 }
 
 function FavoritesPage() {
@@ -455,12 +600,24 @@ function FavoritesPage() {
 
 function PlaylistsPage() {
   const library = useLibraryContext();
+  const [location, navigate] = useLocation();
   const [createOpen, setCreateOpen] = useState(false);
-  const [selected, setSelected] = useState<StoredPlaylist | null>(null);
+  const query = new URLSearchParams(location.split('?')[1] ?? '');
+  const requestedPlaylistId = query.get('playlist');
+  const newPlaylistRequested = query.get('new') === '1';
+  const [selectedId, setSelectedId] = useState<string | null>(requestedPlaylistId);
   const [renameOpen, setRenameOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
+  useEffect(() => {
+    if (requestedPlaylistId) setSelectedId(requestedPlaylistId);
+    if (newPlaylistRequested) {
+      setCreateOpen(true);
+      navigate('/playlists');
+    }
+  }, [requestedPlaylistId, newPlaylistRequested, navigate]);
+  const selected = selectedId ? library.playlists.find((playlist) => playlist.id === selectedId) ?? null : null;
   const playlistSongs = selected ? selected.songIds.map((id) => library.songs.find((song) => song.id === id)).filter(Boolean) as StoredSong[] : [];
-  return <Shell title="Playlists" eyebrow={`${library.playlists.length} curated shelves`} onImport={library.openImport}><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm leading-6 text-muted-foreground">Shape the room around a mood, a season, or the songs you always play together.</p><button type="button" onClick={() => setCreateOpen(true)} className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Plus size={17}/> New playlist</button></div>{selected ? <PlaylistDetail playlist={selected} songs={playlistSongs} onBack={() => setSelected(null)} onRename={() => setRenameOpen(true)} onDelete={() => setConfirmDelete(selected)}/> : library.playlists.length ? <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{library.playlists.map((playlist, index) => <PlaylistCard key={playlist.id} playlist={playlist} index={index} onOpen={() => setSelected(playlist)} onDelete={() => setConfirmDelete(playlist)}/>)}</div> : <div className="mt-7"><EmptyState title="Make your first shelf" description="Create a playlist to gather the songs that belong together." onImport={() => setCreateOpen(true)} icon={ListMusic}/></div>}<Footer/>{createOpen && <PlaylistDialog title="New playlist" initial="" onClose={() => setCreateOpen(false)} onSubmit={async (name) => { await library.createPlaylist(name); setCreateOpen(false); }}/>} {renameOpen && selected && <PlaylistDialog title="Rename playlist" initial={selected.name} onClose={() => setRenameOpen(false)} onSubmit={async (name) => { await library.updatePlaylist({ ...selected, name, updatedAt: Date.now() }); setSelected({ ...selected, name, updatedAt: Date.now() }); setRenameOpen(false); }}/>} {confirmDelete && <ConfirmDialog title="Delete this playlist?" description={`“${confirmDelete.name}” will be removed. The tracks in your library will stay safe.`} onClose={() => setConfirmDelete(null)} onConfirm={async () => { await library.removePlaylist(confirmDelete.id); if (selected?.id === confirmDelete.id) setSelected(null); setConfirmDelete(null); }}/>}</Shell>;
+  return <Shell title="Playlists" eyebrow={`${library.playlists.length} curated shelves`} onImport={library.openImport}><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm leading-6 text-muted-foreground">Shape the room around a mood, a season, or the songs you always play together.</p><button type="button" onClick={() => setCreateOpen(true)} className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Plus size={17}/> New playlist</button></div>{selected ? <PlaylistDetail playlist={selected} songs={playlistSongs} onBack={() => { setSelectedId(null); navigate('/playlists'); }} onRename={() => setRenameOpen(true)} onDelete={() => setConfirmDelete(selected)}/> : library.playlists.length ? <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{library.playlists.map((playlist, index) => <PlaylistCard key={playlist.id} playlist={playlist} index={index} onOpen={() => setSelectedId(playlist.id)} onDelete={() => setConfirmDelete(playlist)}/>)}</div> : <div className="mt-7"><EmptyState title="Make your first shelf" description="Create a playlist to gather the songs that belong together." onImport={() => setCreateOpen(true)} icon={ListMusic}/></div>}<Footer/>{createOpen && <PlaylistDialog title="New playlist" initial="" onClose={() => setCreateOpen(false)} onSubmit={async (name) => { await library.createPlaylist(name); setCreateOpen(false); }}/>} {renameOpen && selected && <PlaylistDialog title="Rename playlist" initial={selected.name} onClose={() => setRenameOpen(false)} onSubmit={async (name) => { await library.updatePlaylist({ ...selected, name, updatedAt: Date.now() }); setRenameOpen(false); }}/>} {confirmDelete && <ConfirmDialog title="Delete this playlist?" description={`“${confirmDelete.name}” will be removed. The tracks in your library will stay safe.`} onClose={() => setConfirmDelete(null)} onConfirm={async () => { await library.removePlaylist(confirmDelete.id); if (selected?.id === confirmDelete.id) setSelectedId(null); setConfirmDelete(null); }}/>}</Shell>;
 }
 
 function PlaylistCard({ playlist, index, onOpen, onDelete }: { playlist: StoredPlaylist; index: number; onOpen: () => void; onDelete: () => void }) {
@@ -474,7 +631,7 @@ function PlaylistDetail({ playlist, songs, onBack, onRename, onDelete }: { playl
   const library = useLibraryContext();
   const [menuId, setMenuId] = useState<string | null>(null);
   const move = async (index: number, direction: -1 | 1) => { const nextIndex = index + direction; if (nextIndex < 0 || nextIndex >= songs.length) return; const ids = [...playlist.songIds]; const [item] = ids.splice(index, 1); ids.splice(nextIndex, 0, item); await library.updatePlaylist({ ...playlist, songIds: ids, updatedAt: Date.now() }); };
-  return <div><button type="button" onClick={onBack} className="button-ghost mb-6 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"><ArrowLeft size={16}/> Back to playlists</button><div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-[#13231a] p-6 sm:flex-row sm:items-end sm:p-8"><div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/60 to-accent/50 text-background shadow-lg"><ListMusic size={42}/></div><div className="min-w-0 flex-1"><div className="text-xs font-bold uppercase tracking-[.18em] text-primary">Playlist</div><h2 className="mt-2 truncate font-display text-3xl font-semibold">{playlist.name}</h2><p className="mt-2 text-sm text-muted-foreground">{songs.length} {songs.length === 1 ? 'track' : 'tracks'} in this shelf</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => songs[0] && library.playSong(songs[0].id, songs.map((song) => song.id))} disabled={!songs.length} className="button-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play all</button><IconButton label="Rename playlist" onClick={onRename}><Pencil size={16}/></IconButton><IconButton label="Delete playlist" onClick={onDelete}><Trash2 size={16}/></IconButton></div></div>{songs.length ? <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card/70">{songs.map((song, index) => <div key={song.id} className="list-row flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4"><span className="w-5 text-center font-mono text-xs text-muted-foreground">{index + 1}</span><button type="button" onClick={() => library.playSong(song.id, songs.map((item) => item.id))} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Artwork song={song} size="sm"/><span className="min-w-0"><span className="block truncate text-sm font-semibold">{song.title}</span><span className="block truncate text-xs text-muted-foreground">{song.artist}</span></span></button><span className="hidden font-mono text-xs text-muted-foreground sm:block">{formatTime(song.duration)}</span><div className="flex"><IconButton label={`Move ${song.title} up`} onClick={() => void move(index, -1)} disabled={index === 0}><ArrowLeft size={14} className="rotate-90"/></IconButton><IconButton label={`Move ${song.title} down`} onClick={() => void move(index, 1)} disabled={index === songs.length - 1}><ArrowRight size={14} className="rotate-90"/></IconButton><div className="relative"><IconButton label={`Playlist options for ${song.title}`} onClick={() => setMenuId(menuId === song.id ? null : song.id)}><MoreHorizontal size={16}/></IconButton>{menuId === song.id && <div className="absolute right-0 top-10 z-10 w-40 rounded-xl border border-border bg-popover p-1 shadow-xl"><button type="button" className="w-full rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-muted" onClick={async () => { await library.updatePlaylist({ ...playlist, songIds: playlist.songIds.filter((id) => id !== song.id), updatedAt: Date.now() }); setMenuId(null); }}>Remove from playlist</button></div>}</div></div></div>)}</div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>;
+  return <div><button type="button" onClick={onBack} className="button-ghost mb-6 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"><ArrowLeft size={16}/> Back to playlists</button><div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-[#13231a] p-6 sm:flex-row sm:items-end sm:p-8"><div className="flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/60 to-accent/50 text-background shadow-lg"><ListMusic size={42}/></div><div className="min-w-0 flex-1"><div className="text-xs font-bold uppercase tracking-[.18em] text-primary">Playlist</div><h2 className="mt-2 truncate font-display text-3xl font-semibold">{playlist.name}</h2><p className="mt-2 text-sm text-muted-foreground">{songs.length} {songs.length === 1 ? 'track' : 'tracks'} in this shelf</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => songs[0] && library.playSong(songs[0].id, songs.map((song) => song.id))} disabled={!songs.length} className="button-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play all</button><button type="button" onClick={() => { if (!songs[0]) return; library.setShuffle(true); library.playSong(songs[0].id, songs.map((song) => song.id)); }} disabled={!songs.length} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold"><Shuffle size={16}/> Shuffle</button><IconButton label="Rename playlist" onClick={onRename}><Pencil size={16}/></IconButton><IconButton label="Delete playlist" onClick={onDelete}><Trash2 size={16}/></IconButton></div></div>{songs.length ? <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-card/70">{songs.map((song, index) => <div key={song.id} className="list-row flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4"><span className="w-5 text-center font-mono text-xs text-muted-foreground">{index + 1}</span><button type="button" onClick={() => library.playSong(song.id, songs.map((item) => item.id))} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Artwork song={song} size="sm"/><span className="min-w-0"><span className="block truncate text-sm font-semibold">{song.title}</span><span className="block truncate text-xs text-muted-foreground">{song.artist}</span></span></button><span className="hidden font-mono text-xs text-muted-foreground sm:block">{formatTime(song.duration)}</span><div className="flex"><IconButton label={`Move ${song.title} up`} onClick={() => void move(index, -1)} disabled={index === 0}><ArrowLeft size={14} className="rotate-90"/></IconButton><IconButton label={`Move ${song.title} down`} onClick={() => void move(index, 1)} disabled={index === songs.length - 1}><ArrowRight size={14} className="rotate-90"/></IconButton><div className="relative"><IconButton label={`Playlist options for ${song.title}`} onClick={() => setMenuId(menuId === song.id ? null : song.id)}><MoreHorizontal size={16}/></IconButton>{menuId === song.id && <div className="absolute right-0 top-10 z-10 w-40 rounded-xl border border-border bg-popover p-1 shadow-xl"><button type="button" className="w-full rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-muted" onClick={async () => { await library.updatePlaylist({ ...playlist, songIds: playlist.songIds.filter((id) => id !== song.id), updatedAt: Date.now() }); setMenuId(null); }}>Remove from playlist</button></div>}</div></div></div>)}</div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>;
 }
 
 function PlaylistDialog({ title, initial, onClose, onSubmit }: { title: string; initial: string; onClose: () => void; onSubmit: (name: string) => Promise<void> }) {

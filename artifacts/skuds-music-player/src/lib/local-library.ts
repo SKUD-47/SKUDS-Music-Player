@@ -5,6 +5,11 @@ export type StoredSong = {
   title: string;
   artist: string;
   album: string;
+  albumArtist?: string;
+  genre?: string;
+  year?: number;
+  trackNumber?: number;
+  discNumber?: number;
   duration: number;
   size: number;
   lastModified: number;
@@ -14,6 +19,7 @@ export type StoredSong = {
   favorite: boolean;
   blob: Blob;
   artwork?: Blob;
+  artworkLocked?: boolean;
 };
 
 export type StoredPlaylist = {
