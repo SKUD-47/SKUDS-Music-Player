@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Captions, Loader2, X } from 'lucide-react';
 
 type SongLike = {
@@ -91,7 +91,7 @@ function writeCache(song: SongLike, lyrics: LyricsData) {
       JSON.stringify(lyrics)
     );
   } catch {
-    // Lyrics are optional; caching failure shouldn't break playback.
+    // Caching is optional.
   }
 }
 
@@ -246,10 +246,9 @@ async function lrclibSearch(song: SongLike) {
 
 async function findLyrics(song: SongLike) {
   try {
-    const exact = await lrclibGet(song);
-    return exact;
+    return await lrclibGet(song);
   } catch {
-    // Continue to search fallback.
+    // Fall back to search.
   }
 
   const results = await lrclibSearch(song);
@@ -287,7 +286,6 @@ function convertResult(
         : undefined,
 
     source: 'lrclib',
-
     fetchedAt: Date.now(),
   };
 }
@@ -360,7 +358,6 @@ export function LyricsFeature({
           convertResult(result);
 
         writeCache(song, converted);
-
         setLyrics(converted);
       })
       .catch((reason: Error) => {
@@ -396,6 +393,20 @@ export function LyricsFeature({
     });
   }, [activeIndex, open]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+    };
+  }, [open]);
+
   const button = (
     <button
       type="button"
@@ -409,9 +420,6 @@ export function LyricsFeature({
         'text-muted-foreground',
         'hover:bg-white/5 hover:text-foreground',
         'disabled:pointer-events-none disabled:opacity-40',
-        open
-          ? 'bg-primary/15 text-primary'
-          : '',
       ].join(' ')}
     >
       <Captions size={16} />
@@ -422,162 +430,157 @@ export function LyricsFeature({
     return button;
   }
 
-return (
-  <>
-    {button}
-
-    {createPortal(
+  const modal = (
+    <div
+      className="fixed left-0 top-0 z-[2147483647] flex h-[100dvh] w-[100vw] items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          setOpen(false);
+        }
+      }}
+    >
       <div
-        className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            setOpen(false);
-          }
-        }}
+        className={[
+          'flex',
+          'h-auto',
+          'max-h-[85dvh]',
+          'w-[min(720px,92vw)]',
+          'flex-col',
+          'overflow-hidden',
+          'rounded-2xl',
+          'border border-white/10',
+          'bg-[#0b1511]',
+          'shadow-2xl',
+        ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Lyrics"
       >
-        {/* lyrics panel */}
-      </div>,
-      document.body
-    )}
-  </>
-);
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            setOpen(false);
-          }
-        }}
-      >
-        {/* Lyrics panel */}
-        <div
-          className={[
-            'flex max-h-[85vh] w-full max-w-2xl',
-            'flex-col overflow-hidden rounded-2xl',
-            'border border-white/10',
-            'bg-[#0b1511]',
-            'shadow-2xl',
-          ].join(' ')}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Lyrics"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-            <div className="min-w-0">
-              <div className="font-display text-lg font-semibold">
-                Lyrics
-              </div>
-
-              {song && (
-                <div className="mt-1 truncate text-xs text-muted-foreground">
-                  {song.title}
-                  {useful(song.artist)
-                    ? ` · ${song.artist}`
-                    : ''}
-                </div>
-              )}
+        <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">
+          <div className="min-w-0">
+            <div className="font-display text-lg font-semibold">
+              Lyrics
             </div>
 
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
-              aria-label="Close lyrics"
-            >
-              <X size={18} />
-            </button>
+            {song && (
+              <div className="mt-1 truncate text-xs text-muted-foreground">
+                {song.title}
+                {useful(song.artist)
+                  ? ` · ${song.artist}`
+                  : ''}
+              </div>
+            )}
           </div>
 
-          {/* Lyrics content */}
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
-            {loading && (
-              <div className="flex min-h-[320px] flex-col items-center justify-center gap-4">
-                <Loader2
-                  size={26}
-                  className="animate-spin text-primary"
-                />
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-white/5 hover:text-foreground"
+            aria-label="Close lyrics"
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-                <div className="text-sm text-muted-foreground">
-                  Finding lyrics…
-                </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
+          {loading && (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-4">
+              <Loader2
+                size={26}
+                className="animate-spin text-primary"
+              />
+
+              <div className="text-sm text-muted-foreground">
+                Finding lyrics…
               </div>
-            )}
+            </div>
+          )}
 
-            {!loading && error && (
-              <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
-                <Captions
-                  size={30}
-                  className="mb-4 text-muted-foreground"
-                />
+          {!loading && error && (
+            <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
+              <Captions
+                size={30}
+                className="mb-4 text-muted-foreground"
+              />
 
-                <div className="font-display text-lg font-semibold">
-                  Lyrics unavailable
-                </div>
-
-                <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-                  {error}
-                </p>
+              <div className="font-display text-lg font-semibold">
+                Lyrics unavailable
               </div>
-            )}
 
-            {!loading &&
-              !error &&
-              syncedLyrics.length > 0 && (
-                <div className="space-y-4 py-10">
-                  {syncedLyrics.map(
-                    (line, index) => {
-                      const active =
-                        index === activeIndex;
+              <p className="mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+                {error}
+              </p>
+            </div>
+          )}
 
-                      return (
-                        <button
-                          type="button"
-                          key={`${line.time}-${index}`}
-                          ref={(element) => {
-                            if (active) {
-                              activeLineRef.current =
-                                element;
-                            }
-                          }}
-                          onClick={() =>
-                            onSeek?.(line.time)
+          {!loading &&
+            !error &&
+            syncedLyrics.length > 0 && (
+              <div className="space-y-4 py-10">
+                {syncedLyrics.map(
+                  (line, index) => {
+                    const active =
+                      index === activeIndex;
+
+                    return (
+                      <button
+                        type="button"
+                        key={`${line.time}-${index}`}
+                        ref={(element) => {
+                          if (active) {
+                            activeLineRef.current =
+                              element;
                           }
-                          className={[
-                            'block w-full text-left',
-                            'leading-8 transition-all',
-                            'duration-300',
-                            active
-                              ? 'scale-[1.02] text-xl font-semibold text-primary'
-                              : 'text-lg text-muted-foreground hover:text-foreground',
-                          ].join(' ')}
-                        >
-                          {line.text}
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-              )}
+                        }}
+                        onClick={() =>
+                          onSeek?.(line.time)
+                        }
+                        className={[
+                          'block w-full text-left',
+                          'leading-8 transition-all',
+                          'duration-300',
+                          active
+                            ? 'scale-[1.02] text-xl font-semibold text-primary'
+                            : 'text-lg text-muted-foreground hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        {line.text}
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            )}
 
-            {!loading &&
-              !error &&
-              syncedLyrics.length === 0 &&
-              lyrics?.plainLyrics && (
-                <div className="whitespace-pre-wrap py-8 text-base leading-8 text-foreground/85">
-                  {lyrics.plainLyrics}
-                </div>
-              )}
+          {!loading &&
+            !error &&
+            syncedLyrics.length === 0 &&
+            lyrics?.plainLyrics && (
+              <div className="whitespace-pre-wrap py-8 text-base leading-8 text-foreground/85">
+                {lyrics.plainLyrics}
+              </div>
+            )}
 
-            {!loading &&
-              !error &&
-              !lyrics?.plainLyrics &&
-              syncedLyrics.length === 0 && (
-                <div className="flex min-h-[320px] items-center justify-center text-sm text-muted-foreground">
-                  No lyrics are available for this song.
-                </div>
-              )}
-          </div>
+          {!loading &&
+            !error &&
+            !lyrics?.plainLyrics &&
+            syncedLyrics.length === 0 && (
+              <div className="flex min-h-[320px] items-center justify-center text-sm text-muted-foreground">
+                No lyrics are available for this song.
+              </div>
+            )}
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      {button}
+
+      {typeof document !== 'undefined'
+        ? createPortal(modal, document.body)
+        : null}
     </>
   );
 }
