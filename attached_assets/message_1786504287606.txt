@@ -1,0 +1,455 @@
+I want you to completely fix and improve the artwork system in Skuds. **Be very specific and actually implement this — do not just make the UI look like it works.**
+
+There are THREE related features I want:
+
+1. Automatic artwork detection for songs
+2. Manual/custom artwork importing
+3. Custom playlist artwork
+
+---
+
+# 1. AUTOMATIC SONG ARTWORK — THIS IS THE MOST IMPORTANT PART
+
+I want Skuds to automatically find the correct artwork for songs.
+
+When a song has no artwork, Skuds should look at the song's metadata and try to identify the actual song/release.
+
+### Read the song metadata first
+
+Use whatever metadata is already available for the song, including:
+
+* Song title
+* Artist
+* Album
+* Album artist
+* Track number
+* Year/release date
+* Any embedded artwork metadata
+* Any other useful ID such as ISRC, album ID, or MusicBrainz ID if available
+
+### Priority order
+
+Use this order:
+
+**1. Embedded artwork**
+
+If the audio file already contains album artwork, use that first.
+
+Do not search the web if the file already has valid embedded artwork.
+
+**2. Metadata-based lookup**
+
+If there is no embedded artwork, search a music metadata/artwork service using the song metadata.
+
+The search should prioritize:
+
+`Artist + Song Title + Album`
+
+rather than searching only the song title.
+
+For example:
+
+`Daft Punk - Get Lucky - Random Access Memories`
+
+should be much more accurate than simply searching:
+
+`Get Lucky`
+
+Use a reliable music catalog/API as the primary source. Apple's music/iTunes search APIs are one possible source because their search results can identify songs/albums and include artwork URLs.
+
+**3. Web fallback**
+
+If the metadata API cannot find a confident match, then use a web/image search fallback.
+
+The goal is NOT to grab the first random image containing the song title.
+
+The system should try to find the **actual album/single artwork**.
+
+Prefer:
+
+* Official artist artwork
+* Official album/single artwork
+* Recognized music catalog artwork
+* High-resolution square artwork
+
+Avoid:
+
+* Fan art
+* YouTube thumbnails unless necessary
+* Random wallpapers
+* Artist photos that aren't album artwork
+* Unrelated images
+* Duplicate/incorrect releases
+
+---
+
+# 2. ARTWORK MATCHING / CONFIDENCE
+
+Do NOT blindly accept the first search result.
+
+Calculate a confidence score based on things such as:
+
+* Artist match
+* Song title match
+* Album match
+* Release match
+* Exact/near-exact metadata match
+* Whether the returned result is actually a song/album result
+* Whether the artwork is square
+
+If confidence is high:
+
+**Automatically use the artwork.**
+
+If confidence is uncertain:
+
+**Show the user several artwork choices and let them select one.**
+
+This is important because the same song title can exist for multiple artists and multiple releases.
+
+---
+
+# 3. "FIND ARTWORK" BUTTON
+
+Add a clear action in the song editor:
+
+**Find Artwork**
+
+When clicked:
+
+`Read metadata → Search catalog → Search fallback if necessary → Show results`
+
+Show artwork results in a visual grid.
+
+Each result should show:
+
+* Artwork
+* Artist
+* Song
+* Album
+* Source
+
+The user should be able to click one and select it.
+
+Then:
+
+**Save Artwork**
+
+must permanently save the selected artwork to that song.
+
+---
+
+# 4. AUTOMATIC ARTWORK FOR THE LIBRARY
+
+If appropriate for the existing architecture, add an option such as:
+
+**Find Missing Artwork**
+
+This should scan songs that don't currently have artwork and attempt to find artwork automatically.
+
+Do not overwrite artwork that the user manually selected unless they explicitly tell the app to replace it.
+
+---
+
+# 5. FIX "IMPORT YOUR OWN ARTWORK"
+
+The current custom artwork importer is broken with many perfectly normal images.
+
+Do NOT assume artwork must already be a specific pixel size.
+
+When the user selects an image, inspect:
+
+* Width
+* Height
+* Aspect ratio
+* MIME type
+* File size
+
+Accept normal image dimensions.
+
+For example, these should all be valid:
+
+`300 × 300`
+
+`500 × 500`
+
+`1000 × 1000`
+
+`1200 × 800`
+
+`800 × 1200`
+
+`2048 × 2048`
+
+The app should NOT reject non-square images simply because they're not square.
+
+Instead, automatically prepare them for square album artwork.
+
+---
+
+# 6. AUTOMATIC SQUARE CROPPING
+
+Album artwork should ultimately be square.
+
+If the uploaded image isn't square:
+
+**DO NOT stretch it.**
+
+Instead:
+
+* Create a square canvas.
+* Use a cover-style crop.
+* Preserve the image's proportions.
+* Center the crop intelligently.
+* Preserve good quality.
+* Convert it into a supported image format if necessary.
+
+If possible, let the user adjust the crop before saving.
+
+---
+
+# 7. ACTUAL ARTWORK PREVIEW
+
+The current preview window is also broken.
+
+FIX IT.
+
+Immediately after selecting an image, the preview should show the actual image.
+
+The preview must work with:
+
+* Square images
+* Landscape images
+* Portrait images
+* Large images
+* PNG
+* JPG/JPEG
+* WebP
+
+The preview should show the **actual square crop that will be saved**, not some unrelated placeholder.
+
+When the user selects another image, the preview must immediately update.
+
+If the current implementation uses `URL.createObjectURL()`, make sure the object URL isn't revoked before the image finishes loading.
+
+---
+
+# 8. CUSTOM PLAYLIST ARTWORK
+
+I ALSO want playlists to have custom artwork.
+
+Every playlist should have its own artwork/image field.
+
+In the playlist editor, add:
+
+**Change Playlist Artwork**
+
+Allow the user to:
+
+* Upload their own image
+* Preview it
+* Crop it if necessary
+* Save it
+* Replace it later
+* Remove it and return to the default playlist artwork
+
+Use the same reliable image-processing/upload system as song artwork.
+
+Do NOT duplicate the entire upload implementation.
+
+Create/reuse a shared artwork upload/processing system.
+
+---
+
+# 9. PLAYLIST IMAGE PREVIEW
+
+The playlist artwork preview must actually work.
+
+The flow should be:
+
+**Choose image → image immediately appears → crop/preview → Save → playlist displays new artwork → refresh → artwork remains**
+
+Do not make it a temporary frontend-only change.
+
+---
+
+# 10. STORAGE / DATABASE
+
+This is extremely important.
+
+Both song artwork and playlist artwork must be persistent.
+
+Do NOT store only:
+
+* React state
+* Component state
+* A temporary blob URL
+* A browser-only object URL
+
+The final artwork needs to be stored using the application's existing persistent storage system.
+
+Then save the resulting artwork reference to the appropriate database record.
+
+Songs should have their artwork persisted independently.
+
+Playlists should have their artwork persisted independently.
+
+---
+
+# 11. IMAGE VALIDATION
+
+Find the actual limits imposed by the current backend/storage implementation.
+
+Do not randomly invent restrictions.
+
+Determine:
+
+* Maximum file size
+* Supported formats
+* Maximum dimensions if there actually is one
+* Storage limitations
+
+Then make frontend validation match the backend.
+
+If an image genuinely cannot be used, display an understandable error.
+
+For example:
+
+> Image is too large. Maximum size is 10 MB.
+
+Never silently fail.
+
+---
+
+# 12. ARTWORK CACHING
+
+Once artwork has been found, don't repeatedly search the web every time the user opens the app.
+
+Save the artwork reference/result with the song.
+
+Only search again when:
+
+* Artwork is missing
+* User clicks "Find Artwork"
+* User explicitly chooses to replace it
+
+---
+
+# 13. DO NOT BREAK EXISTING ARTWORK
+
+If a song already has artwork:
+
+**Do not automatically replace it.**
+
+If the user manually uploaded artwork:
+
+**Treat that as user-selected artwork and don't overwrite it automatically.**
+
+---
+
+# 14. IMPORTANT: DEBUG THE CURRENT IMPLEMENTATION FIRST
+
+Before rewriting everything, inspect the existing code.
+
+Find:
+
+* Song model/schema
+* Playlist model/schema
+* Artwork fields
+* Song editor
+* Playlist editor
+* File input
+* Upload handler
+* Image preview component
+* Backend upload endpoint
+* Storage implementation
+* Database update functions
+* Artwork rendering components
+
+Trace the actual failures.
+
+Check:
+
+* Browser console
+* Network requests
+* Server logs
+* Storage responses
+* Database writes
+
+Fix the actual problems instead of creating a fake frontend-only solution.
+
+---
+
+# 15. FINAL USER EXPERIENCE
+
+For a song with no artwork:
+
+**Song → Find Artwork → metadata read → artwork search → best match → artwork appears → save → artwork persists**
+
+For manual song artwork:
+
+**Song → Import Artwork → choose image → working preview → crop → save → artwork persists**
+
+For playlist artwork:
+
+**Playlist → Change Artwork → choose image → working preview → crop → save → playlist artwork persists**
+
+For automatic artwork:
+
+**Song → metadata → identify artist/title/album → find actual cover art → confidently select best match → save**
+
+---
+
+# 16. ACCEPTANCE TEST
+
+Do not consider this feature complete until you test all of these:
+
+### Song artwork
+
+* Song with embedded artwork
+* Song with no artwork
+* Song with artist/title/album metadata
+* Song with only artist/title
+* Multiple songs with the same title
+* Manual artwork upload
+* Landscape image
+* Portrait image
+* Square image
+* Large image
+* JPG
+* PNG
+* WebP
+
+### Playlist artwork
+
+* Upload playlist artwork
+* Preview playlist artwork
+* Crop playlist artwork
+* Save playlist artwork
+* Replace playlist artwork
+* Remove playlist artwork
+* Refresh page and verify artwork remains
+
+### Persistence test
+
+For BOTH songs and playlists:
+
+**Upload/select artwork → save → completely refresh the page → artwork must still be there.**
+
+---
+
+# FINAL REQUIREMENT
+
+At the end, tell me:
+
+1. What was broken in the existing artwork upload system.
+2. What was broken with the preview.
+3. How song artwork detection works now.
+4. What metadata is used to identify songs.
+5. What API/source is used for artwork lookup.
+6. How web fallback works.
+7. How playlist artwork is stored.
+8. Which files were changed.
+9. How you tested persistence.
+
+**Do not just say "implemented." I want the actual technical explanation and confirmation that the complete flow was tested.**

@@ -1,0 +1,1 @@
+- [Artwork rendering](artwork-rendering.md) — Render persisted artwork Blobs with real `<img>` elements; CSS background layers can hide failed or late object URLs behind placeholders.

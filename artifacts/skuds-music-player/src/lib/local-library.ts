@@ -20,6 +20,7 @@ export type StoredSong = {
   blob: Blob;
   artwork?: Blob;
   artworkLocked?: boolean;
+  artworkSource?: 'embedded' | 'automatic' | 'manual';
 };
 
 export type StoredPlaylist = {
@@ -28,6 +29,7 @@ export type StoredPlaylist = {
   songIds: string[];
   createdAt: number;
   updatedAt: number;
+  artwork?: Blob;
 };
 
 type Setting = { key: string; value: unknown };
