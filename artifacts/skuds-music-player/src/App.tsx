@@ -22,6 +22,20 @@ import {
 
 import { LyricsFeature } from '../LyricsFeature';
 
+function MetadataDialog({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+  return (
+    <Dialog title="Song Info" onClose={onClose}>
+      <div className="p-4 text-sm text-muted-foreground">
+        Song information is temporarily unavailable.
+      </div>
+    </Dialog>
+  );
+}
+
 const queryClient = new QueryClient();
 const ACCEPTED = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/flac', 'audio/x-flac', 'audio/webm'];
 const EXTENSIONS = /\.(mp3|wav|m4a|aac|ogg|flac|webm)$/i;
