@@ -202,19 +202,120 @@ function LibraryProvider({ children }: { children: ReactNode }) {
     } catch {
       // Playback remains fully functional in browsers without Web Audio support.
     }
-    const onTime = () => { setProgress(audio.currentTime || 0); setDuration(Number.isFinite(audio.duration) ? audio.duration : 0); };
-    const onPlay = () => { void audioContextRef.current?.resume(); setIsPlaying(true); };
-    const onPause = () => setIsPlaying(false);
-    const onError = () => { setIsPlaying(false); toast('This file could not be played by your browser.', 'error'); };
-    const onEnded = () => nextRef.current();
-    audio.addEventListener('timeupdate', onTime); audio.addEventListener('loadedmetadata', onTime);
-    audio.addEventListener('play', onPlay); audio.addEventListener('pause', onPause); audio.addEventListener('error', onError); audio.addEventListener('ended', onEnded);
+   let animationFrame = 0;
+
+const updateProgress = () => {
+  setProgress(audio.currentTime || 0);
+
+  setDuration(
+    Number.isFinite(audio.duration)
+      ? audio.duration
+      : 0
+  );
+
+  if (!audio.paused && !audio.ended) {
+    animationFrame =
+      requestAnimationFrame(updateProgress);
+  }
+};
+
+const onTime = () => {
+  setProgress(audio.currentTime || 0);
+
+  setDuration(
+    Number.isFinite(audio.duration)
+      ? audio.duration
+      : 0
+  );
+};
+
+const onPlay = () => {
+  void audioContextRef.current?.resume();
+  setIsPlaying(true);
+
+  cancelAnimationFrame(animationFrame);
+
+  animationFrame =
+    requestAnimationFrame(updateProgress);
+};
+
+const onPause = () => {
+  setIsPlaying(false);
+
+  cancelAnimationFrame(animationFrame);
+
+  setProgress(audio.currentTime || 0);
+};
+
+const onError = () => {
+  setIsPlaying(false);
+
+  cancelAnimationFrame(animationFrame);
+
+  toast(
+    'This file could not be played by your browser.',
+    'error'
+  );
+};
+
+const onEnded = () => {
+  cancelAnimationFrame(animationFrame);
+  nextRef.current();
+};
+
+audio.addEventListener(
+  'timeupdate',
+  onTime
+);
+
+audio.addEventListener(
+  'loadedmetadata',
+  onTime
+);
+
+audio.addEventListener(
+  'play',
+  onPlay
+);
+
+audio.addEventListener(
+  'pause',
+  onPause
+);
+
+audio.addEventListener(
+  'error',
+  onError
+);
+
+audio.addEventListener(
+  'ended',
+  onEnded
+);
     Promise.all([getSongs(), getPlaylists(), getSetting('volume', .78), getSetting<string | null>('lastPlayed', null)]).then(([storedSongs, storedPlaylists, storedVolume, lastPlayed]) => {
       setSongs(storedSongs); setPlaylists(storedPlaylists); setVolumeState(storedVolume); audio.volume = storedVolume;
       if (lastPlayed && storedSongs.some((song) => song.id === lastPlayed)) { setCurrentId(lastPlayed); setSequence(storedSongs.map((song) => song.id)); }
       setLoading(false);
     }).catch(() => { setLoading(false); setStorageError('Your browser did not allow local library storage. You can still try a session import.'); });
-    return () => { audio.pause(); audio.removeEventListener('timeupdate', onTime); audio.removeEventListener('loadedmetadata', onTime); audio.removeEventListener('play', onPlay); audio.removeEventListener('pause', onPause); audio.removeEventListener('error', onError); audio.removeEventListener('ended', onEnded); if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); setVisualizer(null); void audioContextRef.current?.close(); audioContextRef.current = null; };
+    return () => { 
+  audio.pause();
+  cancelAnimationFrame(animationFrame);
+
+  audio.removeEventListener('timeupdate', onTime);
+  audio.removeEventListener('loadedmetadata', onTime);
+  audio.removeEventListener('play', onPlay);
+  audio.removeEventListener('pause', onPause);
+  audio.removeEventListener('error', onError);
+  audio.removeEventListener('ended', onEnded);
+
+  if (objectUrlRef.current) {
+    URL.revokeObjectURL(objectUrlRef.current);
+  }
+
+  setVisualizer(null);
+  void audioContextRef.current?.close();
+  audioContextRef.current = null;
+};
   }, []);
 
   const nextRef = useRef<() => void>(() => undefined);
