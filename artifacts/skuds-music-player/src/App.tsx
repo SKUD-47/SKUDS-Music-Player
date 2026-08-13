@@ -4,8 +4,7 @@ import {
   CalendarDays, Clock3, FileText, Hash, Info, Library, ListMusic, Menu, MoreHorizontal, Pause, Pencil, Play, Plus, Repeat, Repeat1, Search,
   Settings as SettingsIcon, Shuffle, SkipBack, SkipForward, Trash2, Upload, UserRound, Volume2, VolumeX, X, Music2,
 } from 'lucide-react';
-import { Link, Route, Switch, useLocation, useRoute } from 'wouter';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Link, Route, Switch, useLocation, useRoute, useSearch } from 'wouter';import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -664,12 +663,9 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
       <Link href="/" className="mb-10 block"><Logo compact={sidebarCollapsed}/></Link>
       {!sidebarCollapsed && <div className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Your room</div>}
       <nav className="space-y-1">{navItems.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} title={sidebarCollapsed ? label : undefined} data-testid={`link-nav-${label.toLowerCase().replaceAll(' ', '-')}`} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${sidebarCollapsed ? 'justify-center' : ''} ${location === href ? 'bg-primary/12 text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}><NavIcon size={18} strokeWidth={location === href ? 2.4 : 1.8}/>{!sidebarCollapsed && <span>{label}</span>}{!sidebarCollapsed && label === 'Favorites' && library.songs.filter((song) => song.favorite).length > 0 && <span className="ml-auto text-xs text-muted-foreground">{library.songs.filter((song) => song.favorite).length}</span>}</Link>)}</nav>
-{!sidebarCollapsed && library.playlists.length > 0 && <div className="mt-8"><div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Playlists</div><div className="space-y-1">{library.playlists.map((playlist) => <button key={playlist.id} type="button" onClick={() => {
-  navigate('/playlists');
-  setTimeout(() => {
-    navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`);
-  }, 0);
-}} className="flex w-full items-center gap-2 truncate rounded-xl px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70"/><span className="truncate">{playlist.name}</span></button>)}</div></div>}      <div className={`my-8 h-px ${sidebarCollapsed ? 'bg-transparent' : 'bg-sidebar-border'}`}/>
+{!sidebarCollapsed && library.playlists.length > 0 && <div className="mt-8"><div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Playlists</div><div className="space-y-1">{library.playlists.map((playlist) => <button key={playlist.id} type="button" onClick={() =>
+  navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`)
+} className="flex w-full items-center gap-2 truncate rounded-xl px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70"/><span className="truncate">{playlist.name}</span></button>)}</div></div>}      <div className={`my-8 h-px ${sidebarCollapsed ? 'bg-transparent' : 'bg-sidebar-border'}`}/>
       <button type="button" onClick={() => onImport?.()} title={sidebarCollapsed ? 'Import Music' : undefined} className={`button-primary flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${sidebarCollapsed ? '' : ''}`}><Plus size={17}/>{!sidebarCollapsed && 'Import Music'}</button>
       <button type="button" aria-haspopup="dialog" onClick={() => setCreatePlaylistOpen(true)} title={sidebarCollapsed ? 'New playlist' : undefined} data-testid="button-new-playlist" className={`mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${sidebarCollapsed ? 'justify-center' : ''}`}><ListMusic size={17}/>{!sidebarCollapsed && 'New playlist'}</button>
       {!sidebarCollapsed && <div className="mt-auto rounded-2xl border border-primary/15 bg-primary/[.045] p-4"><div className="flex items-center gap-2 text-xs font-semibold text-primary"><Archive size={14}/> Local-first</div><p className="mt-2 text-xs leading-5 text-muted-foreground">Your files stay in this browser. Nothing is uploaded.</p></div>}
@@ -1005,11 +1001,13 @@ function FavoritesPage() {
 
 function PlaylistsPage() {
   const library = useLibraryContext();
-  const [location, navigate] = useLocation();
-  const [createOpen, setCreateOpen] = useState(false);
-  const query = new URLSearchParams(location.split('?')[1] ?? '');
-  const requestedPlaylistId = query.get('playlist');
-  const newPlaylistRequested = query.get('new') === '1';
+  const [, navigate] = useLocation();
+const search = useSearch();
+const [createOpen, setCreateOpen] = useState(false);
+
+const query = new URLSearchParams(search);
+const requestedPlaylistId = query.get('playlist');
+const newPlaylistRequested = query.get('new') === '1';
 const [selectedId, setSelectedId] = useState<string | null>(null);
 const [renameOpen, setRenameOpen] = useState(false);
 const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
