@@ -407,24 +407,18 @@ export function LyricsFeature({
     };
   }, [open]);
 
-  const button = (
-    <button
-      type="button"
-      disabled={!song}
-      onClick={() => setOpen(true)}
-      title="Lyrics"
-      aria-label="Lyrics"
-      className={[
-        'inline-flex h-9 w-9 items-center justify-center',
-        'rounded-lg transition-colors',
-        'text-muted-foreground',
-        'hover:bg-white/5 hover:text-foreground',
-        'disabled:pointer-events-none disabled:opacity-40',
-      ].join(' ')}
-    >
-      <Captions size={16} />
-    </button>
-  );
+ const button = (
+  <button
+    type="button"
+    disabled={!song}
+    onClick={() => setOpen(true)}
+    title="Lyrics"
+    aria-label="Lyrics"
+    className="button-icon h-9 w-9"
+  >
+    <Captions size={16} />
+  </button>
+);
 
   if (!open) {
     return button;
