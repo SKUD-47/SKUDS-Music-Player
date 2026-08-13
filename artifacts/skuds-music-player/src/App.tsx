@@ -218,8 +218,14 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   const nextRef = useRef<() => void>(() => undefined);
   const next = useCallback(() => {
     if (!songs.length) return;
-    if (repeat === 'one' && currentId) { autoplayRef.current = true; setCurrentId(currentId); return; }
-    let nextId = queue[0];
+if (repeat === 'one' && currentId) {
+  const audio = audioRef.current;
+  if (audio) {
+    audio.currentTime = 0;
+    void audio.play();
+  }
+  return;
+}    let nextId = queue[0];
     if (nextId) setQueue((items) => items.slice(1));
     else {
       const source = sequence.length ? sequence : songs.map((song) => song.id);
