@@ -1022,14 +1022,8 @@ useEffect(() => {
 }, [requestedPlaylistId, newPlaylistRequested]);
 
 const selected = requestedPlaylistId
-  ? library.playlists.find(
-      (playlist) => playlist.id === requestedPlaylistId
-    ) ?? null
-  : selectedId
-    ? library.playlists.find(
-        (playlist) => playlist.id === selectedId
-      ) ?? null
-    : null;
+  ? library.playlists.find((playlist) => playlist.id === requestedPlaylistId) ?? null
+  : null;
 
 const playlistSongs = selected
   ? selected.songIds
