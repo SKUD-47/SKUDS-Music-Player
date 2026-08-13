@@ -1002,139 +1002,47 @@ function PlaylistsPage() {
   const library = useLibraryContext();
   const [location, navigate] = useLocation();
   const [createOpen, setCreateOpen] = useState(false);
-  const [renameOpen, setRenameOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
-
   const query = new URLSearchParams(location.split('?')[1] ?? '');
-  const playlistId = query.get('playlist');
+  const requestedPlaylistId = query.get('playlist');
   const newPlaylistRequested = query.get('new') === '1';
+const [selectedId, setSelectedId] = useState<string | null>(null);
+const [renameOpen, setRenameOpen] = useState(false);
+const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
 
-  const selected = playlistId
-    ? library.playlists.find((playlist) => playlist.id === playlistId) ?? null
+useEffect(() => {
+  if (requestedPlaylistId) {
+    setSelectedId(requestedPlaylistId);
+  } else {
+    setSelectedId(null);
+  }
+
+  if (newPlaylistRequested) {
+    setCreateOpen(true);
+  }
+}, [requestedPlaylistId, newPlaylistRequested]);
+
+const selected = requestedPlaylistId
+  ? library.playlists.find(
+      (playlist) => playlist.id === requestedPlaylistId
+    ) ?? null
+  : selectedId
+    ? library.playlists.find(
+        (playlist) => playlist.id === selectedId
+      ) ?? null
     : null;
 
-  const playlistSongs = selected
-    ? selected.songIds
-        .map((id) => library.songs.find((song) => song.id === id))
-        .filter(Boolean) as StoredSong[]
-    : [];
+const playlistSongs = selected
+  ? selected.songIds
+      .map((id) => library.songs.find((song) => song.id === id))
+      .filter(Boolean) as StoredSong[]
+  : [];
+  return <Shell title="Playlists" eyebrow={`${library.playlists.length} curated shelves`} onImport={library.openImport}><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm leading-6 text-muted-foreground">Shape the room around a mood, a season, or the songs you always play together.</p><button type="button" onClick={() => setCreateOpen(true)} className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Plus size={17}/> New playlist</button></div>{selected ? <PlaylistDetail playlist={selected} songs={playlistSongs} onBack={() => { setSelectedId(null); navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`); }} onRename={() => setRenameOpen(true)} onDelete={() => setConfirmDelete(selected)}/> : library.playlists.length ? <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{library.playlists.map((playlist, index) => <PlaylistCard key={playlist.id} playlist={playlist} index={index} onOpen={() => {
+  setSelectedId(playlist.id);
+  navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`);
+}} onDelete={() => setConfirmDelete(playlist)}/>)}</div> : <div className="mt-7"><EmptyState title="Make your first shelf" description="Create a playlist to gather the songs that belong together." onImport={() => setCreateOpen(true)} icon={ListMusic}/></div>}<Footer/>{createOpen && <PlaylistDialog title="New playlist" initial="" onClose={() => setCreateOpen(false)} onSubmit={async (name) => { const playlist = await library.createPlaylist(name); setCreateOpen(false); setSelectedId(playlist.id); navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`); }}/>} {renameOpen && selected && <PlaylistDialog title="Rename playlist" initial={selected.name} onClose={() => setRenameOpen(false)} onSubmit={async (name) => { await library.updatePlaylist({ ...selected, name, updatedAt: Date.now() }); setRenameOpen(false); }}/>} {confirmDelete && <ConfirmDialog title="Delete this playlist?" description={`“${confirmDelete.name}” will be removed. The tracks in your library will stay safe.`} onClose={() => setConfirmDelete(null)} onConfirm={async () => { await library.removePlaylist(confirmDelete.id); if (selected?.id === confirmDelete.id) setSelectedId(null); setConfirmDelete(null); }}/>}</Shell>;
+}
 
-  useEffect(() => {
-    if (newPlaylistRequested) {
-      setCreateOpen(true);
-    }
-  }, [newPlaylistRequested]);
-
-  const openPlaylist = (id: string) => {
-    navigate(`/playlists?playlist=${encodeURIComponent(id)}`);
-  };
-
-  const closePlaylist = () => {
-    navigate('/playlists');
-  };
-
-  return (
-    <Shell
-      title="Playlists"
-      eyebrow={`${library.playlists.length} curated shelves`}
-      onImport={library.openImport}
-    >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <p className="max-w-lg text-sm leading-6 text-muted-foreground">
-          Shape the room around a mood, a season, or the songs you always play together.
-        </p>
-
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
-        >
-          <Plus size={17} />
-          New playlist
-        </button>
-      </div>
-
-      {selected ? (
-        <PlaylistDetail
-          playlist={selected}
-          songs={playlistSongs}
-          onBack={closePlaylist}
-          onRename={() => setRenameOpen(true)}
-          onDelete={() => setConfirmDelete(selected)}
-        />
-      ) : library.playlists.length ? (
-        <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {library.playlists.map((playlist, index) => (
-            <PlaylistCard
-              key={playlist.id}
-              playlist={playlist}
-              index={index}
-              onOpen={() => openPlaylist(playlist.id)}
-              onDelete={() => setConfirmDelete(playlist)}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="mt-7">
-          <EmptyState
-            title="Make your first shelf"
-            description="Create a playlist to gather the songs that belong together."
-            onImport={() => setCreateOpen(true)}
-            icon={ListMusic}
-          />
-        </div>
-      )}
-
-      <Footer />
-
-      {createOpen && (
-        <PlaylistDialog
-          title="New playlist"
-          initial=""
-          onClose={() => setCreateOpen(false)}
-          onSubmit={async (name) => {
-            const playlist = await library.createPlaylist(name);
-            setCreateOpen(false);
-            openPlaylist(playlist.id);
-          }}
-        />
-      )}
-
-      {renameOpen && selected && (
-        <PlaylistDialog
-          title="Rename playlist"
-          initial={selected.name}
-          onClose={() => setRenameOpen(false)}
-          onSubmit={async (name) => {
-            await library.updatePlaylist({
-              ...selected,
-              name,
-              updatedAt: Date.now(),
-            });
-            setRenameOpen(false);
-          }}
-        />
-      )}
-
-      {confirmDelete && (
-        <ConfirmDialog
-          title="Delete this playlist?"
-          description={`“${confirmDelete.name}” will be removed. The tracks in your library will stay safe.`}
-          onClose={() => setConfirmDelete(null)}
-          onConfirm={async () => {
-            await library.removePlaylist(confirmDelete.id);
-
-            if (selected?.id === confirmDelete.id) {
-              closePlaylist();
-            }
-
-            setConfirmDelete(null);
-          }}
-        />
-      )}
-    </Shell>
-  );
-}{ playlist, index, onOpen, onDelete }: { playlist: StoredPlaylist; index: number; onOpen: () => void; onDelete: () => void }) {
+function PlaylistCard({ playlist, index, onOpen, onDelete }: { playlist: StoredPlaylist; index: number; onOpen: () => void; onDelete: () => void }) {
   const library = useLibraryContext();
   const first = library.songs.find((song) => playlist.songIds.includes(song.id));
   return <div className="surface group relative overflow-hidden rounded-2xl p-3 transition-transform hover:-translate-y-1"><button type="button" onClick={onOpen} className="block w-full text-left"><PlaylistArtwork playlist={playlist} className="flex aspect-[1.7/1] items-end rounded-xl p-4"/><div className="sr-only">{playlist.name}</div></button><div className="flex items-center justify-between px-1 pb-1 pt-4"><div className="min-w-0"><div className="truncate text-xs text-muted-foreground">{first ? `Starts with ${first.title}` : 'A new, empty shelf'}</div></div><div className="flex items-center gap-1"><IconButton label={`Play ${playlist.name}`} onClick={() => first && library.playSong(first.id, playlist.songIds)} disabled={!first}><Play size={14} fill="currentColor"/></IconButton><IconButton label={`Delete ${playlist.name}`} onClick={onDelete}><Trash2 size={14}/></IconButton></div></div></div>;
