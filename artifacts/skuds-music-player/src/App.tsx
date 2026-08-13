@@ -143,7 +143,7 @@ type LibraryContextValue = {
   playSong: (id: string, collection?: string[]) => void; togglePlay: () => void; next: () => void; previous: () => void;
   seek: (value: number) => void; setVolume: (value: number) => void; setShuffle: (v: boolean) => void; cycleRepeat: () => void;
   toggleFavorite: (id: string) => void; addQueue: (id: string) => void; removeQueue: (id: string) => void; clearQueue: () => void;
-  updateSong: (song: StoredSong) => Promise<void>; updatePlaylist: (playlist: StoredPlaylist) => Promise<void>; createPlaylist: (name: string, initialSongId?: string) => Promise<void>;
+  updateSong: (song: StoredSong) => Promise<void>; updatePlaylist: (playlist: StoredPlaylist) => Promise<void>; createPlaylist: (name: string, initialSongId?: string) => Promise<StoredPlaylist>;
   findArtwork: (song: StoredSong) => Promise<ArtworkCandidate[]>; findMissingArtwork: () => Promise<void>;
   removePlaylist: (id: string) => Promise<void>; removeSong: (id: string) => Promise<void>;
   toasts: Toast[]; dismissToast: (id: number) => void; toast: (message: string, tone?: Toast['tone']) => void;
@@ -438,7 +438,7 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   const removeQueue = useCallback((id: string) => setQueue((items) => items.filter((item) => item !== id)), []);
   const clearQueue = useCallback(() => setQueue([]), []);
   const updatePlaylist = useCallback(async (playlist: StoredPlaylist) => { await savePlaylist(playlist); setPlaylists((items) => items.map((item) => item.id === playlist.id ? playlist : item)); }, []);
-  const createPlaylist = useCallback(async (name: string, initialSongId?: string) => { const playlist = { id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2), name: name.trim(), songIds: initialSongId ? [initialSongId] : [], createdAt: Date.now(), updatedAt: Date.now() }; await savePlaylist(playlist); setPlaylists((items) => [playlist, ...items]); toast(initialSongId ? `Created “${playlist.name}” with the selected track.` : `Created “${playlist.name}”.`); }, [toast]);
+  const createPlaylist = useCallback(async (name: string, initialSongId?: string) => { const playlist = { id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2), name: name.trim(), songIds: initialSongId ? [initialSongId] : [], createdAt: Date.now(), updatedAt: Date.now() }; await savePlaylist(playlist); setPlaylists((items) => [playlist, ...items]); toast(initialSongId ? `Created “${playlist.name}” with the selected track.` : `Created “${playlist.name}”.`); return playlist; }, [toast]);
   const removePlaylist = useCallback(async (id: string) => { await deletePlaylist(id); setPlaylists((items) => items.filter((item) => item.id !== id)); toast('Playlist deleted.'); }, [toast]);
   const removeSong = useCallback(async (id: string) => { await deleteSong(id); setSongs((items) => items.filter((item) => item.id !== id)); setQueue((items) => items.filter((item) => item !== id)); if (currentId === id) { audioRef.current?.pause(); setCurrentId(null); } toast('Track removed from your library.'); }, [currentId, toast]);
   const openImport = () => fileInputRef.current?.click();
@@ -463,10 +463,20 @@ function useLibraryContext() {
 }
 
 function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; title: string; eyebrow?: string; onImport?: () => void }) {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const library = useLibraryContext();
   const [mobileMenu, setMobileMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
+  const handleCreatePlaylist = async (name: string) => {
+    try {
+      const playlist = await library.createPlaylist(name);
+      setCreatePlaylistOpen(false);
+      navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`);
+    } catch {
+      library.toast('The playlist could not be saved.', 'error');
+    }
+  };
   const navItems = [{ href: '/', label: 'Home', icon: HomeIcon }, { href: '/songs', label: 'All Songs', icon: Library }, { href: '/favorites', label: 'Favorites', icon: Heart }, { href: '/playlists', label: 'Playlists', icon: ListMusic }];
   return <div className="min-h-[100dvh] bg-background text-foreground">
     <aside className={`desktop-sidebar fixed inset-y-0 left-0 z-30 flex flex-col bg-sidebar py-6 transition-[width,padding] duration-300 ${sidebarCollapsed ? 'sidebar-collapsed w-[76px] px-3' : 'sidebar-expanded w-[248px] px-5'}`}>
@@ -476,7 +486,7 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
       {!sidebarCollapsed && library.playlists.length > 0 && <div className="mt-8"><div className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[.22em] text-muted-foreground">Playlists</div><div className="space-y-1">{library.playlists.map((playlist) => <Link key={playlist.id} href={`/playlists?playlist=${encodeURIComponent(playlist.id)}`} className="flex items-center gap-2 truncate rounded-xl px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary/70"/><span className="truncate">{playlist.name}</span></Link>)}</div></div>}
       <div className={`my-8 h-px ${sidebarCollapsed ? 'bg-transparent' : 'bg-sidebar-border'}`}/>
       <button type="button" onClick={() => onImport?.()} title={sidebarCollapsed ? 'Import Music' : undefined} className={`button-primary flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold ${sidebarCollapsed ? '' : ''}`}><Plus size={17}/>{!sidebarCollapsed && 'Import Music'}</button>
-      <Link href="/playlists?new=1" title={sidebarCollapsed ? 'New playlist' : undefined} className={`mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${sidebarCollapsed ? 'justify-center' : ''}`}><ListMusic size={17}/>{!sidebarCollapsed && 'New playlist'}</Link>
+      <button type="button" aria-haspopup="dialog" onClick={() => setCreatePlaylistOpen(true)} title={sidebarCollapsed ? 'New playlist' : undefined} data-testid="button-new-playlist" className={`mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground ${sidebarCollapsed ? 'justify-center' : ''}`}><ListMusic size={17}/>{!sidebarCollapsed && 'New playlist'}</button>
       {!sidebarCollapsed && <div className="mt-auto rounded-2xl border border-primary/15 bg-primary/[.045] p-4"><div className="flex items-center gap-2 text-xs font-semibold text-primary"><Archive size={14}/> Local-first</div><p className="mt-2 text-xs leading-5 text-muted-foreground">Your files stay in this browser. Nothing is uploaded.</p></div>}
       <nav className={`${sidebarCollapsed ? 'mt-auto w-full flex-col-reverse items-center gap-2' : 'mt-5 items-center gap-1'} flex`}><Link href="/settings" title={sidebarCollapsed ? 'Settings' : undefined} className={`button-ghost flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${sidebarCollapsed ? 'justify-center' : 'flex-1'}`}><SettingsIcon size={15}/>{!sidebarCollapsed && 'Settings'}</Link><Link href="/about" className="button-ghost flex items-center rounded-lg p-2" aria-label="About" title={sidebarCollapsed ? 'About' : undefined}><CircleHelp size={16}/></Link></nav>
     </aside>
@@ -491,7 +501,8 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
       <main className="page-scroll px-4 py-6 sm:px-8 sm:py-8"><div className="page-enter mx-auto max-w-[1260px]">{children}</div></main>
     </div>
     <MobileNav location={location}/>
-    {mobileMenu && <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMobileMenu(false)}><div className="h-full w-[280px] border-r border-sidebar-border bg-sidebar p-5" onClick={(event) => event.stopPropagation()}><div className="mb-10 flex items-center justify-between"><Logo/><IconButton label="Close menu" onClick={() => setMobileMenu(false)}><X size={18}/></IconButton></div>{navItems.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} onClick={() => setMobileMenu(false)} className={`mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${location === href ? 'bg-primary/12 text-primary' : 'text-muted-foreground'}`}><NavIcon size={18}/>{label}</Link>)}<div className="my-5 h-px bg-sidebar-border"/><Link href="/settings" onClick={() => setMobileMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-muted-foreground"><SettingsIcon size={18}/>Settings</Link><Link href="/about" onClick={() => setMobileMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-muted-foreground"><CircleHelp size={18}/>About</Link></div></div>}
+     {mobileMenu && <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMobileMenu(false)}><div className="h-full w-[280px] border-r border-sidebar-border bg-sidebar p-5" onClick={(event) => event.stopPropagation()}><div className="mb-10 flex items-center justify-between"><Logo/><IconButton label="Close menu" onClick={() => setMobileMenu(false)}><X size={18}/></IconButton></div>{navItems.map(({ href, label, icon: NavIcon }) => <Link key={href} href={href} onClick={() => setMobileMenu(false)} className={`mb-1 flex items-center gap-3 rounded-xl px-3 py-3 text-sm ${location === href ? 'bg-primary/12 text-primary' : 'text-muted-foreground'}`}><NavIcon size={18}/>{label}</Link>)}<button type="button" onClick={() => { setMobileMenu(false); setCreatePlaylistOpen(true); }} className="mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-muted-foreground"><ListMusic size={18}/>New playlist</button><div className="my-5 h-px bg-sidebar-border"/><Link href="/settings" onClick={() => setMobileMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-muted-foreground"><SettingsIcon size={18}/>Settings</Link><Link href="/about" onClick={() => setMobileMenu(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-muted-foreground"><CircleHelp size={18}/>About</Link></div></div>}
+     {createPlaylistOpen && <PlaylistDialog title="New playlist" initial="" onClose={() => setCreatePlaylistOpen(false)} onSubmit={handleCreatePlaylist}/>}
     <BottomPlayer sidebarCollapsed={sidebarCollapsed}/>
   </div>;
 }
@@ -803,14 +814,11 @@ function PlaylistsPage() {
   const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
   useEffect(() => {
     if (requestedPlaylistId) setSelectedId(requestedPlaylistId);
-    if (newPlaylistRequested) {
-      setCreateOpen(true);
-      navigate('/playlists');
-    }
+    if (newPlaylistRequested) setCreateOpen(true);
   }, [requestedPlaylistId, newPlaylistRequested, navigate]);
   const selected = selectedId ? library.playlists.find((playlist) => playlist.id === selectedId) ?? null : null;
   const playlistSongs = selected ? selected.songIds.map((id) => library.songs.find((song) => song.id === id)).filter(Boolean) as StoredSong[] : [];
-  return <Shell title="Playlists" eyebrow={`${library.playlists.length} curated shelves`} onImport={library.openImport}><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm leading-6 text-muted-foreground">Shape the room around a mood, a season, or the songs you always play together.</p><button type="button" onClick={() => setCreateOpen(true)} className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Plus size={17}/> New playlist</button></div>{selected ? <PlaylistDetail playlist={selected} songs={playlistSongs} onBack={() => { setSelectedId(null); navigate('/playlists'); }} onRename={() => setRenameOpen(true)} onDelete={() => setConfirmDelete(selected)}/> : library.playlists.length ? <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{library.playlists.map((playlist, index) => <PlaylistCard key={playlist.id} playlist={playlist} index={index} onOpen={() => setSelectedId(playlist.id)} onDelete={() => setConfirmDelete(playlist)}/>)}</div> : <div className="mt-7"><EmptyState title="Make your first shelf" description="Create a playlist to gather the songs that belong together." onImport={() => setCreateOpen(true)} icon={ListMusic}/></div>}<Footer/>{createOpen && <PlaylistDialog title="New playlist" initial="" onClose={() => setCreateOpen(false)} onSubmit={async (name) => { await library.createPlaylist(name); setCreateOpen(false); }}/>} {renameOpen && selected && <PlaylistDialog title="Rename playlist" initial={selected.name} onClose={() => setRenameOpen(false)} onSubmit={async (name) => { await library.updatePlaylist({ ...selected, name, updatedAt: Date.now() }); setRenameOpen(false); }}/>} {confirmDelete && <ConfirmDialog title="Delete this playlist?" description={`“${confirmDelete.name}” will be removed. The tracks in your library will stay safe.`} onClose={() => setConfirmDelete(null)} onConfirm={async () => { await library.removePlaylist(confirmDelete.id); if (selected?.id === confirmDelete.id) setSelectedId(null); setConfirmDelete(null); }}/>}</Shell>;
+  return <Shell title="Playlists" eyebrow={`${library.playlists.length} curated shelves`} onImport={library.openImport}><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm leading-6 text-muted-foreground">Shape the room around a mood, a season, or the songs you always play together.</p><button type="button" onClick={() => setCreateOpen(true)} className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Plus size={17}/> New playlist</button></div>{selected ? <PlaylistDetail playlist={selected} songs={playlistSongs} onBack={() => { setSelectedId(null); navigate('/playlists'); }} onRename={() => setRenameOpen(true)} onDelete={() => setConfirmDelete(selected)}/> : library.playlists.length ? <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{library.playlists.map((playlist, index) => <PlaylistCard key={playlist.id} playlist={playlist} index={index} onOpen={() => setSelectedId(playlist.id)} onDelete={() => setConfirmDelete(playlist)}/>)}</div> : <div className="mt-7"><EmptyState title="Make your first shelf" description="Create a playlist to gather the songs that belong together." onImport={() => setCreateOpen(true)} icon={ListMusic}/></div>}<Footer/>{createOpen && <PlaylistDialog title="New playlist" initial="" onClose={() => setCreateOpen(false)} onSubmit={async (name) => { const playlist = await library.createPlaylist(name); setCreateOpen(false); setSelectedId(playlist.id); navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`); }}/>} {renameOpen && selected && <PlaylistDialog title="Rename playlist" initial={selected.name} onClose={() => setRenameOpen(false)} onSubmit={async (name) => { await library.updatePlaylist({ ...selected, name, updatedAt: Date.now() }); setRenameOpen(false); }}/>} {confirmDelete && <ConfirmDialog title="Delete this playlist?" description={`“${confirmDelete.name}” will be removed. The tracks in your library will stay safe.`} onClose={() => setConfirmDelete(null)} onConfirm={async () => { await library.removePlaylist(confirmDelete.id); if (selected?.id === confirmDelete.id) setSelectedId(null); setConfirmDelete(null); }}/>}</Shell>;
 }
 
 function PlaylistCard({ playlist, index, onOpen, onDelete }: { playlist: StoredPlaylist; index: number; onOpen: () => void; onDelete: () => void }) {
@@ -834,7 +842,22 @@ function PlaylistArtwork({ playlist, className }: { playlist: StoredPlaylist; cl
 
 function PlaylistDialog({ title, initial, onClose, onSubmit }: { title: string; initial: string; onClose: () => void; onSubmit: (name: string) => Promise<void> }) {
   const [name, setName] = useState(initial);
-  return <Dialog title={title} onClose={onClose} footer={<><button type="button" onClick={onClose} className="button-ghost rounded-xl px-4 py-2 text-sm">Cancel</button><button type="button" disabled={!name.trim()} onClick={() => void onSubmit(name.trim())} className="button-primary rounded-xl px-4 py-2 text-sm font-semibold">Save playlist</button></>}><label className="text-sm font-medium">Playlist name<input autoFocus data-testid="input-playlist-name" value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && name.trim()) void onSubmit(name.trim()); }} placeholder="Late-night drives" className="mt-2 h-11 w-full rounded-xl border border-border bg-muted/50 px-3 text-sm outline-none focus:border-primary"/></label></Dialog>;
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const submit = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName || saving) return;
+    setSaving(true);
+    setError('');
+    try {
+      await onSubmit(trimmedName);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The playlist could not be saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <Dialog title={title} onClose={onClose} footer={<><button type="button" onClick={onClose} disabled={saving} className="button-ghost rounded-xl px-4 py-2 text-sm">Cancel</button><button type="button" disabled={!name.trim() || saving} onClick={() => void submit()} className="button-primary rounded-xl px-4 py-2 text-sm font-semibold">{saving ? 'Saving…' : 'Save playlist'}</button></>}><label className="text-sm font-medium">Playlist name<input autoFocus data-testid="input-playlist-name" value={name} onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void submit(); } }} placeholder="Late-night drives" className="mt-2 h-11 w-full rounded-xl border border-border bg-muted/50 px-3 text-sm outline-none focus:border-primary"/></label>{error && <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-red-100">{error}</div>}</Dialog>;
 }
 
 function AddToPlaylistDialog({ song, onClose }: { song: StoredSong; onClose: () => void }) {
