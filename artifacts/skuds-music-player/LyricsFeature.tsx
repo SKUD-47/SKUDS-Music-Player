@@ -244,22 +244,13 @@ async function lrclibSearch(song: SongLike) {
 }
 
 async function findLyrics(song: SongLike) {
-  /*
-   * First attempt:
-   * exact title + artist + album + duration
-   */
   try {
     const exact = await lrclibGet(song);
-
     return exact;
   } catch {
     // Continue to search fallback.
   }
 
-  /*
-   * Second attempt:
-   * broader LRCLIB search.
-   */
   const results = await lrclibSearch(song);
 
   if (!results.length) {
@@ -275,10 +266,6 @@ async function findLyrics(song: SongLike) {
 
   const best = ranked[0];
 
-  /*
-   * Don't show lyrics if we're not reasonably
-   * confident they're for this song.
-   */
   if (!best || best.score < 50) {
     throw new Error('ambiguous');
   }
@@ -332,11 +319,11 @@ export function LyricsFeature({
     useState<LyricsData | null>(null);
   const [error, setError] = useState('');
 
-  const activeLineRef = useRef<HTMLButtonElement | null>(
-    null
-  );
+  const activeLineRef =
+    useRef<HTMLButtonElement | null>(null);
 
-  const syncedLyrics = lyrics?.syncedLyrics ?? [];
+  const syncedLyrics =
+    lyrics?.syncedLyrics ?? [];
 
   const activeIndex = useMemo(
     () =>
@@ -438,20 +425,16 @@ export function LyricsFeature({
     <>
       {button}
 
+      {/* Full-screen lyrics overlay */}
       <div
-<div
-  className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-  onMouseDown={(event) => {
-    if (event.target === event.currentTarget) {
-      setOpen(false);
-    }
-  }}
->
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+        onMouseDown={(event) => {
           if (event.target === event.currentTarget) {
             setOpen(false);
           }
         }}
       >
+        {/* Lyrics panel */}
         <div
           className={[
             'flex max-h-[85vh] w-full max-w-2xl',
@@ -464,6 +447,7 @@ export function LyricsFeature({
           aria-modal="true"
           aria-label="Lyrics"
         >
+          {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
             <div className="min-w-0">
               <div className="font-display text-lg font-semibold">
@@ -490,6 +474,7 @@ export function LyricsFeature({
             </button>
           </div>
 
+          {/* Lyrics content */}
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-8">
             {loading && (
               <div className="flex min-h-[320px] flex-col items-center justify-center gap-4">
