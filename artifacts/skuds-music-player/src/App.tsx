@@ -23,19 +23,77 @@ import {
 import { LyricsFeature } from '../LyricsFeature';
 
 function MetadataDialog({
+  song,
   onClose,
 }: {
+  song: StoredSong;
   onClose: () => void;
 }) {
+  const details = [
+    ['Title', song.title, Music2],
+    ['Artist', song.artist, UserRound],
+    ['Album', song.album, Disc3],
+    ['Genre', song.genre || 'Unknown', Music2],
+    ['Year', song.year?.toString() || 'Unknown', CalendarDays],
+    ['Track number', song.trackNumber?.toString() || 'Unknown', Hash],
+    ['Duration', formatTime(song.duration), Clock3],
+    ['Filename', song.name, FileText],
+    ['File type', song.type || 'Unknown format', FileAudio],
+    ['File size', formatFileSize(song.size), Archive],
+  ] as const;
+
   return (
-    <Dialog title="Song Info" onClose={onClose}>
-      <div className="p-4 text-sm text-muted-foreground">
-        Song information is temporarily unavailable.
+    <Dialog
+      title="Song info"
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className="button-primary rounded-xl px-4 py-2 text-sm font-semibold"
+        >
+          Done
+        </button>
+      }
+    >
+      <div className="flex items-center gap-3 rounded-xl bg-muted/60 p-3">
+        <Artwork song={song} size="sm" />
+
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold">
+            {song.title}
+          </div>
+
+          <div className="truncate text-xs text-muted-foreground">
+            {song.artist}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 divide-y divide-border rounded-xl border border-border">
+        {details.map(([label, value, Icon]) => (
+          <div
+            key={label}
+            className="flex items-start gap-3 px-3 py-2.5 text-xs"
+          >
+            <Icon
+              size={14}
+              className="mt-0.5 shrink-0 text-primary"
+            />
+
+            <span className="text-muted-foreground">
+              {label}
+            </span>
+
+            <span className="ml-auto max-w-[55%] break-words text-right font-medium text-foreground">
+              {value}
+            </span>
+          </div>
+        ))}
       </div>
     </Dialog>
   );
 }
-
 const queryClient = new QueryClient();
 const ACCEPTED = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/flac', 'audio/x-flac', 'audio/webm'];
 const EXTENSIONS = /\.(mp3|wav|m4a|aac|ogg|flac|webm)$/i;
