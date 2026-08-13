@@ -18,6 +18,7 @@ import {
   fetchArtworkBlob, isSupportedArtwork, loadArtworkInfo, prepareArtwork, searchArtwork,
   type ArtworkCandidate, type ArtworkImageInfo,
 } from '@/lib/artwork';
+import { Analytics } from '@vercel/analytics/react';
 
 import { LyricsFeature } from '../LyricsFeature';
 
@@ -186,7 +187,7 @@ function Dialog({ title, children, onClose, footer }: { title: string; children:
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><div className="dark app-noise min-h-[100dvh]"><Router/><Toaster/></div></TooltipProvider></QueryClientProvider>;
+  return <QueryClientProvider client={queryClient}><TooltipProvider><div className="dark app-noise min-h-[100dvh]"><Router/><Toaster/><Analytics/></div></TooltipProvider></QueryClientProvider>;
 }
 
 function Router() {
