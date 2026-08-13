@@ -439,7 +439,14 @@ export function LyricsFeature({
       {button}
 
       <div
-className="fixed left-0 top-0 z-[9999] flex h-screen w-screen items-center justify-center bg-black/70 p-4 backdrop-blur-sm"        onMouseDown={(event) => {
+<div
+  className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+  onMouseDown={(event) => {
+    if (event.target === event.currentTarget) {
+      setOpen(false);
+    }
+  }}
+>
           if (event.target === event.currentTarget) {
             setOpen(false);
           }
