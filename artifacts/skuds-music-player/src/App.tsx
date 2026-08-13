@@ -1005,36 +1005,37 @@ function PlaylistsPage() {
   const query = new URLSearchParams(location.split('?')[1] ?? '');
   const requestedPlaylistId = query.get('playlist');
   const newPlaylistRequested = query.get('new') === '1';
-const [selectedId, setSelectedId] = useState<string | null>(null);  const [renameOpen, setRenameOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
+const [selectedId, setSelectedId] = useState<string | null>(null);
+const [renameOpen, setRenameOpen] = useState(false);
+const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
+
 useEffect(() => {
-  setSelectedId(requestedPlaylistId);
+  if (requestedPlaylistId) {
+    setSelectedId(requestedPlaylistId);
+  } else {
+    setSelectedId(null);
+  }
 
   if (newPlaylistRequested) {
     setCreateOpen(true);
   }
 }, [requestedPlaylistId, newPlaylistRequested]);
-useEffect(() => {
-  setSelectedId(requestedPlaylistId);
-
-  if (newPlaylistRequested) {
-    setCreateOpen(true);
-  }
-}, [requestedPlaylistId, newPlaylistRequested]);
-
-const activePlaylistId = requestedPlaylistId ?? selectedId;
 
 const selected = requestedPlaylistId
-  ? library.playlists.find((playlist) => playlist.id === requestedPlaylistId) ?? null
+  ? library.playlists.find(
+      (playlist) => playlist.id === requestedPlaylistId
+    ) ?? null
   : selectedId
-    ? library.playlists.find((playlist) => playlist.id === selectedId) ?? null
+    ? library.playlists.find(
+        (playlist) => playlist.id === selectedId
+      ) ?? null
     : null;
 
 const playlistSongs = selected
   ? selected.songIds
       .map((id) => library.songs.find((song) => song.id === id))
       .filter(Boolean) as StoredSong[]
-  : [];  const playlistSongs = selected ? selected.songIds.map((id) => library.songs.find((song) => song.id === id)).filter(Boolean) as StoredSong[] : [];
+  : [];
   return <Shell title="Playlists" eyebrow={`${library.playlists.length} curated shelves`} onImport={library.openImport}><div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><p className="max-w-lg text-sm leading-6 text-muted-foreground">Shape the room around a mood, a season, or the songs you always play together.</p><button type="button" onClick={() => setCreateOpen(true)} className="button-primary inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Plus size={17}/> New playlist</button></div>{selected ? <PlaylistDetail playlist={selected} songs={playlistSongs} onBack={() => { setSelectedId(null); navigate('/playlists'); }} onRename={() => setRenameOpen(true)} onDelete={() => setConfirmDelete(selected)}/> : library.playlists.length ? <div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{library.playlists.map((playlist, index) => <PlaylistCard key={playlist.id} playlist={playlist} index={index} onOpen={() => {
   setSelectedId(playlist.id);
   navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`);
