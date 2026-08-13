@@ -644,16 +644,14 @@ function useLibraryContext() {
 }
 
 function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; title: string; eyebrow?: string; onImport?: () => void }) {
-  const [location, navigate] = useLocation();
-  const library = useLibraryContext();
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [createPlaylistOpen, setCreatePlaylistOpen] = useState(false);
-  const handleCreatePlaylist = async (name: string) => {
-    try {
-      const playlist = await library.createPlaylist(name);
-      setCreatePlaylistOpen(false);
-      navigate(`/playlists?playlist=${encodeURIComponent(playlist.id)}`);
+ const [location, navigate] = useLocation();
+
+const requestedPlaylistId =
+  new URLSearchParams(location.split('?')[1] || '').get('playlist');
+
+const selected = requestedPlaylistId
+  ? library.playlists.find((p) => p.id === requestedPlaylistId) ?? null
+  : null;
     } catch {
       library.toast('The playlist could not be saved.', 'error');
     }
@@ -1026,15 +1024,7 @@ useEffect(() => {
   }
 }, [requestedPlaylistId, newPlaylistRequested]);
 
-const selected = requestedPlaylistId
-  ? library.playlists.find(
-      (playlist) => playlist.id === requestedPlaylistId
-    ) ?? null
-  : selectedId
-    ? library.playlists.find(
-        (playlist) => playlist.id === selectedId
-      ) ?? null
-    : null;
+
 
 const playlistSongs = selected
   ? selected.songIds
