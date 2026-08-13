@@ -1,0 +1,272 @@
+I want you to modify the existing code to fix and add ONLY the following
+features.
+
+IMPORTANT:
+
+Inspect the existing implementation first and reuse existing working
+components/logic wherever possible.
+
+Do NOT rewrite unrelated parts of the application.
+
+Do NOT break the existing music player, artwork scraper, import system,
+metadata, playlists, or Home tab.
+
+==================================================
+1. FIX THE EXISTING ARTWORK SCRAPER + ARTWORK DISPLAY
+==================================================
+
+There is already an artwork scraper / artwork finder in this project that
+appears to work.
+
+DO NOT replace it with a new scraper.
+
+Instead, inspect the existing scraper and fix its integration with the song
+import process and artwork display.
+
+Determine whether the scraper currently runs automatically during import.
+
+Desired behavior:
+
+IMPORT AUDIO FILE
+→ Read metadata
+→ Check for embedded artwork
+→ If embedded artwork exists, use it
+→ If no embedded artwork exists, automatically use the existing artwork
+  scraper/finder
+→ Save the found artwork to the song
+→ If nothing is found, use the normal placeholder
+
+IMPORTANT:
+
+Valid embedded artwork must always take priority.
+
+If embedded artwork exists:
+
+- Extract it.
+- Save it.
+- Do NOT replace it with scraped artwork.
+
+If there is no embedded artwork:
+
+- Automatically run the EXISTING artwork scraper during import if it does
+  not already do so.
+- Use the song's metadata to search.
+- Save the resulting artwork to the song.
+- Do not make artwork lookup failure stop the import.
+
+DO NOT create a second artwork-search system.
+
+Reuse the existing scraper.
+
+--------------------------------------------------
+ARTWORK DISPLAY BUG
+--------------------------------------------------
+
+The artwork being found/saved can appear extremely tiny, shrunken, or
+incorrectly positioned inside its thumbnail/container.
+
+Fix the actual cause.
+
+Inspect whether this is caused by:
+
+- CSS width/height
+- max-width/max-height
+- object-fit
+- object-position
+- Container sizing
+- Flex/grid alignment
+- Padding/margins
+- Aspect-ratio
+- Thumbnail-specific styles
+- Differences between embedded/scraped/manual artwork
+
+Make artwork:
+
+- Properly sized
+- Centered horizontally and vertically
+- Correctly contained in its intended thumbnail
+- Not distorted
+- Not unnecessarily cropped
+- Correct for square and non-square artwork
+
+Do NOT modify the actual stored artwork just to hide a CSS problem.
+
+==================================================
+2. FIX THE ALL SONGS THREE-DOT MENU
+==================================================
+
+Fix the existing three-dot/context menu bug in the All Songs tab.
+
+The Home tab already works correctly.
+
+USE THE HOME TAB AS THE REFERENCE IMPLEMENTATION.
+
+Compare Home and All Songs and reuse the working implementation/logic where
+possible.
+
+Required behavior:
+
+Click song row
+→ Song plays/selects.
+
+Click three dots
+→ ONLY opens the menu.
+→ MUST NOT play/select the song.
+
+Click menu item
+→ ONLY performs that action.
+→ MUST NOT interact with the song underneath.
+
+Click anywhere inside the open menu
+→ MUST NOT click through to the song row underneath.
+
+Fix the actual root cause.
+
+Inspect:
+
+- Event propagation
+- stopPropagation()
+- preventDefault()
+- z-index
+- Stacking contexts
+- pointer-events
+- Menu positioning
+- Parent row click handlers
+- Menu button handlers
+
+The menu must:
+
+- Appear above the song row.
+- Receive pointer/click events.
+- Have working menu buttons.
+- Close when clicking outside.
+- Close on Escape if the existing app supports it.
+- Never trigger playback.
+
+DO NOT break the already-working Home menu.
+
+==================================================
+3. ADD THE AUDIO VISUALIZER
+==================================================
+
+There is currently no audio visualizer.
+
+Add a real-time audio visualizer using the EXISTING audio player/audio
+element.
+
+DO NOT create a second audio player.
+
+Use the existing audio architecture and Web Audio API/AnalyserNode where
+appropriate.
+
+The visualizer should:
+
+- React to the currently playing audio.
+- Work when switching songs.
+- Work with pause/resume.
+- Work with playlists.
+- Not interfere with playback.
+- Not interfere with seeking, volume, play, or pause.
+- Avoid duplicate AudioContexts/listeners.
+- Avoid memory leaks.
+
+VERY IMPORTANT LOCATION:
+
+The visualizer MUST be inside the existing BOTTOM-LEFT MINI-PLAYER/CARD.
+
+It should fit naturally into that existing player.
+
+It must NOT become:
+
+- Fullscreen
+- A separate giant panel
+- A page overlay
+- A second player
+
+Do not cover important song information or controls.
+
+==================================================
+4. ADD PLAYLIST THUMBNAIL/COVER EDITING
+==================================================
+
+Allow users to change the thumbnail/cover artwork of a playlist.
+
+Reuse the existing image upload/preview/processing system.
+
+The user should be able to:
+
+- Select an image.
+- Preview it immediately.
+- Save it as the playlist's thumbnail/cover.
+
+Support the same reasonable image formats already supported by the app.
+
+Process oversized images appropriately while preserving aspect ratio.
+
+The playlist thumbnail must persist after refresh/reopening the app.
+
+IMPORTANT:
+
+Changing a playlist thumbnail must NOT change the artwork of the individual
+songs inside that playlist.
+
+==================================================
+5. TEST EVERYTHING YOU CHANGED
+==================================================
+
+After making the changes, run the app and test:
+
+ARTWORK:
+
+1. Import MP3 with embedded artwork.
+2. Verify embedded artwork is saved.
+3. Verify scraper does NOT replace embedded artwork.
+4. Import MP3 without embedded artwork.
+5. Verify existing scraper automatically finds artwork.
+6. Verify scraped artwork is saved to the song.
+7. Verify missing artwork falls back to placeholder.
+8. Verify artwork thumbnails are properly sized and centered.
+
+THREE-DOT MENU:
+
+1. Click song → it plays.
+2. Click three dots → menu opens and song does NOT play.
+3. Click menu action → action happens and song does NOT play.
+4. Click inside menu → no click-through/playback.
+5. Test multiple menu actions.
+6. Test closing/reopening menu.
+7. Verify Home still works.
+
+VISUALIZER:
+
+1. Play a song.
+2. Verify visualizer reacts to audio.
+3. Pause/resume.
+4. Switch songs.
+5. Verify it stays inside the bottom-left mini-player.
+6. Verify it doesn't interfere with playback controls.
+
+PLAYLIST THUMBNAIL:
+
+1. Change playlist thumbnail.
+2. Preview image.
+3. Save it.
+4. Refresh/reopen app.
+5. Verify thumbnail persists.
+6. Verify individual song artwork was not changed.
+
+Check browser console and relevant backend logs for errors.
+
+Fix errors caused by these changes.
+
+Do NOT modify unrelated features.
+
+At the end, give me a concise summary of:
+
+- What you changed.
+- Which existing components/logic you reused.
+- Any root causes you found.
+- What tests passed.
+- Any remaining issues.
+
+Then STOP.

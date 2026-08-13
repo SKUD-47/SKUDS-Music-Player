@@ -1,0 +1,122 @@
+I need two remaining fixes. DO NOT change or rewrite unrelated features.
+Everything else from the previous task is working correctly.
+
+==================================================
+1. FIX THE THREE-DOT MENU — STILL BROKEN
+==================================================
+
+The three-dot menu in the All Songs/song list STILL does not work correctly.
+
+The problem is that when I click an item inside the three-dot menu, the click
+can pass through/interact with the song row underneath it.
+
+For example:
+
+Song A
+[ three-dot menu ]
+Song B
+
+If I click a menu option, it must ONLY activate that menu option.
+
+It MUST NOT:
+
+- Click Song B underneath.
+- Trigger Song B's row click handler.
+- Start playing Song B.
+- Select Song B.
+- Trigger any underlying song action.
+
+The menu itself must receive the click.
+
+IMPORTANT:
+
+The Home tab's three-dot menu works correctly.
+
+Use the WORKING HOME MENU as the reference and compare its:
+
+- Event handlers
+- Event propagation
+- Pointer events
+- z-index
+- Stacking context
+- Menu positioning
+- Button structure
+- Parent row click handlers
+
+Find the actual reason All Songs is still allowing click-through.
+
+Fix the root cause rather than adding random delays or hacks.
+
+Make sure:
+
+- Clicking the three dots only opens the menu.
+- Clicking a menu option only performs that option.
+- Clicking inside the menu never triggers the underlying song.
+- Menu actions execute exactly once.
+- The menu appears above the song row.
+- The menu receives pointer events.
+- The song row underneath cannot receive the same click.
+
+Do NOT break the working Home menu.
+
+==================================================
+2. REMOVE ALBUM ARTIST + DISC NUMBER FROM THE UI
+==================================================
+
+I previously requested that these metadata fields NOT be shown in the
+user-facing metadata editor:
+
+- Album Artist
+- Disc Number / Disc Track
+
+Remove them from the UI completely.
+
+IMPORTANT:
+
+KEEP EVERYTHING ELSE.
+
+Do NOT remove:
+
+- Artist
+- Album
+- Year
+- Genre
+- Music Track
+- Composer
+- Or any other existing metadata
+
+The existing metadata parsing/storage can continue keeping these values
+internally if needed.
+
+This is specifically a USER INTERFACE change.
+
+==================================================
+TESTING
+==================================================
+
+After making the changes:
+
+1. Open All Songs.
+2. Open a song's three-dot menu.
+3. Click every relevant menu option.
+4. Verify the song underneath NEVER receives the click.
+5. Verify the underlying song does not play or become selected.
+6. Open multiple menus and test them.
+7. Verify Home's existing menu still works.
+8. Open the metadata editor.
+9. Verify Album Artist is gone.
+10. Verify Disc Number/Disc Track is gone.
+11. Verify Artist, Year, Music Track, and all other metadata remain.
+
+Check the browser console for errors.
+
+Only fix issues related to these two tasks.
+
+Do NOT modify the artwork scraper, visualizer, playlist thumbnails, importing,
+or other features that are already working.
+
+At the end, briefly tell me:
+- What caused the menu click-through bug.
+- What you changed to fix it.
+- What metadata fields were removed from the UI.
+- What you tested.

@@ -1,0 +1,73 @@
+The All Songs three-dot menu is now completely broken after the recent changes.
+
+STOP making any other changes.
+
+I want you to diagnose and fix ONLY the All Songs three-dot menu.
+
+IMPORTANT:
+The Home tab's three-dot menu works correctly. Use it as the canonical
+reference implementation.
+
+First compare the current All Songs menu against the working Home menu.
+
+Trace:
+
+- The song row click handler
+- The three-dot button click handler
+- Menu rendering
+- Menu item click handlers
+- Event propagation
+- stopPropagation()
+- preventDefault()
+- Pointer events
+- z-index
+- Stacking contexts
+- Positioning
+- Conditional rendering/state controlling the menu
+
+Determine exactly what changed that caused the All Songs menu to stop working.
+
+DO NOT rewrite the menu from scratch if the Home implementation can be reused.
+
+The desired behavior is:
+
+1. Clicking the song row → plays the song.
+2. Clicking the three dots → opens the menu and DOES NOT play the song.
+3. Clicking a menu item → performs that action and DOES NOT play the song.
+4. Clicking anywhere inside the menu → interacts with the menu only.
+5. The menu must receive pointer/click events.
+6. The song row underneath must never receive menu clicks.
+7. Closing and reopening the menu must continue working.
+8. Home's existing behavior must remain unchanged.
+
+If the recent changes introduced a regression, revert ONLY the relevant
+menu-related change and then apply the minimal fix needed.
+
+DO NOT TOUCH:
+
+- Artwork
+- Artwork scraper
+- Importing
+- Visualizer
+- Playlists
+- Playlist thumbnails
+- Metadata
+- Keyboard shortcuts
+- Audio player
+
+Those features are currently working and must remain untouched.
+
+After fixing it, test all of these exact cases:
+
+- Open menu
+- Close menu
+- Reopen menu
+- Click every menu action
+- Click inside menu
+- Click the three-dot button
+- Click the song row normally
+- Click another song
+- Verify no menu click causes playback
+- Verify Home still works
+
+Then STOP and tell me the exact root cause and exact files/components changed.
