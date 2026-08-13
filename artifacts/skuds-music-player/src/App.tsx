@@ -1010,6 +1010,27 @@ const [renameOpen, setRenameOpen] = useState(false);
 const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
 
 useEffect(() => {
+  setSelectedId(requestedPlaylistId);
+
+  if (newPlaylistRequested) {
+    setCreateOpen(true);
+  }
+}, [requestedPlaylistId, newPlaylistRequested]);
+
+const selected = selectedId
+  ? library.playlists.find(
+      (playlist) => playlist.id === selectedId
+    ) ?? null
+  : null;
+
+const playlistSongs = selected
+  ? selected.songIds
+      .map((id) => library.songs.find((song) => song.id === id))
+      .filter(Boolean) as StoredSong[]
+  : [];const [renameOpen, setRenameOpen] = useState(false);
+const [confirmDelete, setConfirmDelete] = useState<StoredPlaylist | null>(null);
+
+useEffect(() => {
   if (requestedPlaylistId) {
     setSelectedId(requestedPlaylistId);
   } else {
