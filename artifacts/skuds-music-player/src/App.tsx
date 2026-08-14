@@ -21,6 +21,7 @@ import {
 
 import { LyricsFeature } from '../LyricsFeature';
 import { autoFindArtwork } from '@/lib/artwork-auto';
+import { askForFolderPlaylist } from './folderPlaylistImporter';
 
 function MetadataDialog({
   song,
