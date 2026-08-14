@@ -587,6 +587,7 @@ if (repeat === 'one' && currentId) {
         setSongs((items) => [song, ...items]);
         existingKeys.add(fileKey);
         added++;
+        addedSongIds.push(song.id);
 if (!song.artwork) {
   void autoFindArtwork(song).then(async (result) => {
     if (!result) return;
@@ -610,72 +611,31 @@ if (!song.artwork) {
         rejected++;
       }
     }
-if (addedSongIds.length > 0) {
-  console.log('CREATING IMPORT PLAYLIST', addedSongIds);
-  console.log('IMPORT PLAYLIST DEBUG', {
-  files: files.length,
-  addedSongIds: addedSongIds.length,
-  addedSongIds,
-});
+      if (addedSongIds.length > 0) {
+    const importedNumber =
+      playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
 
-  const importedName = 'Imported Music';
+    const newPlaylist: StoredPlaylist = {
+      id: crypto.randomUUID(),
+      name: `Imported Music ${importedNumber}`,
+      songIds: addedSongIds,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
 
-  const existing = playlists.find(
-    (playlist) =>
-      playlist.name.trim().toLowerCase() === importedName.toLowerCase()
-  );
+    try {
+      await savePlaylist(newPlaylist);
+      setPlaylists((items) => [newPlaylist, ...items]);
 
-  const playlist: StoredPlaylist = existing
-    ? {
-        ...existing,
-        songIds: [
-          ...existing.songIds,
-          ...addedSongIds.filter(
-            (id) => !existing.songIds.includes(id)
-          ),
-        ],
-        updatedAt: Date.now(),
-      }
-    : {
-        id:
-          crypto.randomUUID?.() ??
-          Math.random().toString(36).slice(2),
-        name: importedName,
-        songIds: addedSongIds,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
-  try {
-    await savePlaylist(playlist);
-
-    setPlaylists((current) => {
-      const alreadyExists = current.some(
-        (item) => item.id === playlist.id
+      toast(
+        `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`
       );
-
-      if (alreadyExists) {
-        return current.map((item) =>
-          item.id === playlist.id ? playlist : item
-        );
-      }
-
-      return [playlist, ...current];
-    });
-
-    toast(
-      existing
-        ? `Added ${addedSongIds.length} tracks to “Imported Music”.`
-        : `Created “Imported Music” with ${addedSongIds.length} tracks.`
-    );
-  } catch (error) {
-    console.error('Failed to create import playlist:', error);
-    toast(
-      'The songs imported, but the playlist could not be created.',
-      'error'
-    );
+    } catch (error) {
+      console.error('Failed to create import playlist:', error);
+      toast('Songs imported, but the playlist could not be created.', 'error');
+    }
   }
-}
+
    if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
     if (rejected) toast(`${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`, 'error');
