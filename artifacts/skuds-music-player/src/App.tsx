@@ -611,6 +611,7 @@ if (!song.artwork) {
       }
     }
 if (addedSongIds.length > 0) {
+  console.log('CREATING IMPORT PLAYLIST', addedSongIds);
   console.log('IMPORT PLAYLIST DEBUG', {
   files: files.length,
   addedSongIds: addedSongIds.length,
