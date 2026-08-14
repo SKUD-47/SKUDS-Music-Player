@@ -519,6 +519,7 @@ if (repeat === 'one' && currentId) {
   }, [findArtwork, songs, toast]);
 
   const importFiles = useCallback(async (input: FileList | File[]) => {
+    alert("I AM RUNNING THE IMPORT CODE");
     const files = Array.from(input);
     if (!files.length) return;
     let added = 0; let duplicates = 0; let rejected = 0;
