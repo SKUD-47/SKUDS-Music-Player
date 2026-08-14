@@ -615,6 +615,7 @@ if (!song.artwork) {
    // Only create an import playlist when importing multiple songs.
 // A single imported song goes directly into the library.
 if (addedSongIds.length > 1) {
+if (addedSongIds.length > 1) {
   const importedNumber =
     playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
 
@@ -643,8 +644,7 @@ if (addedSongIds.length > 1) {
    if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
     if (rejected) toast(`${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`, 'error');
-  }, [songs, playlists, toast, enrichArtwork]);
-
+}, [songs, playlists, toast]);
   const toggleFavorite = useCallback((id: string) => {
     setSongs((items) => { const nextSongs = items.map((song) => song.id === id ? { ...song, favorite: !song.favorite } : song); const changed = nextSongs.find((song) => song.id === id); if (changed) void saveSong(changed); return nextSongs; });
   }, []);
