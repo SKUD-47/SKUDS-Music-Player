@@ -677,7 +677,6 @@ if (addedSongIds.length > 0) {
     );
   }
 }
- alert(`ABOUT TO MAKE PLAYLIST: ${addedSongIds.length} songs`);
    if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
     if (rejected) toast(`${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`, 'error');
