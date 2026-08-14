@@ -617,6 +617,7 @@ if (!song.artwork) {
 if (addedSongIds.length > 1) {
 if (addedSongIds.length > 1) {
 if (addedSongIds.length > 1) {
+if (addedSongIds.length > 1) {
   const importedNumber =
     playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
 
@@ -639,10 +640,25 @@ if (addedSongIds.length > 1) {
     toast('Songs imported, but the playlist could not be created.', 'error');
   }
 }
-    }
-  }
 
-   if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
+if (added) {
+  toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
+}
+
+if (duplicates) {
+  toast(
+    `${duplicates} duplicate ${
+      duplicates === 1 ? 'file was' : 'files were'
+    } skipped.`
+  );
+}
+
+if (rejected) {
+  toast(
+    `${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`,
+    'error'
+  );
+} toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
     if (rejected) toast(`${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`, 'error');
 }, [songs, playlists, toast]);
