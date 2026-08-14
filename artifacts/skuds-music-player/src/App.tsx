@@ -610,7 +610,7 @@ if (!song.artwork) {
         rejected++;
       }
     }
-    if (files.length >= 2 && addedSongIds.length > 1) {
+if (addedSongIds.length > 0) {
       const importedName = 'Imported Music';
       const existing = playlists.find((playlist) => playlist.name.trim().toLowerCase() === importedName.toLowerCase());
       const nextPlaylist: StoredPlaylist = existing
