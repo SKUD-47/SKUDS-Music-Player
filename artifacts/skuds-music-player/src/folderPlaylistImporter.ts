@@ -1,42 +1,61 @@
-export interface FolderPlaylistImport {
+export type FolderImportResult = {
   files: File[];
   playlistName: string;
-}
+};
 
-export function askForFolderPlaylist(
-  files: FileList | File[],
-): FolderPlaylistImport | null {
-  const fileArray = Array.from(files);
+export function openFolderPlaylistImporter(): Promise<FolderImportResult | null> {
+  console.log('🔥 FOLDER IMPORTER CALLED');  return new Promise((resolve) => {
+    const input = document.createElement('input');
 
-  if (fileArray.length === 0) {
-    return null;
-  }
+    input.type = 'file';
+    input.multiple = true;
+    input.accept = 'audio/*';
 
-  const firstFile = fileArray[0] as File & {
-    webkitRelativePath?: string;
-  };
+    input.setAttribute('webkitdirectory', '');
+    input.setAttribute('directory', '');
 
-  const relativePath = firstFile.webkitRelativePath ?? '';
+    input.style.display = 'none';
 
-  // Example:
-  // "My Music/song.mp3"
-  //                 ↓
-  //              "My Music"
-  const folderName =
-    relativePath.split('/')[0] ||
-    'My Music';
+    document.body.appendChild(input);
 
-  const playlistName = window.prompt(
-    'What would you like to name this playlist?',
-    folderName,
-  );
+    input.addEventListener(
+      'change',
+      () => {
+        const files = Array.from(input.files ?? []);
 
-  if (!playlistName?.trim()) {
-    return null;
-  }
+        input.remove();
 
-  return {
-    files: fileArray,
-    playlistName: playlistName.trim(),
-  };
+        if (!files.length) {
+          resolve(null);
+          return;
+        }
+
+        const firstFile = files[0] as File & {
+          webkitRelativePath?: string;
+        };
+
+        const folderName =
+          firstFile.webkitRelativePath?.split('/')[0] ||
+          'My Music';
+
+        const playlistName = window.prompt(
+          'What would you like to name this playlist?',
+          folderName,
+        );
+
+        if (!playlistName?.trim()) {
+          resolve(null);
+          return;
+        }
+
+        resolve({
+          files,
+          playlistName: playlistName.trim(),
+        });
+      },
+      { once: true },
+    );
+
+    input.click();
+  });
 }
