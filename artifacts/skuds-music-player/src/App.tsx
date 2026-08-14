@@ -588,59 +588,17 @@ if (repeat === 'one' && currentId) {
         existingKeys.add(fileKey);
         added++;
         addedSongIds.push(id);
-void autoFindArtwork(song).then(async (result) => {
-  if (!result) return;
-
-  const updatedSong = {
-    ...song,
-    artwork: result.artwork,
-    artworkSource: 'automatic' as const,
-  };
-
-  await saveSong(updatedSong);
-
-  setSongs((items) =>
-    items.map((item) =>
-      item.id === song.id ? updatedSong : item
-    )
-  );
-});      } catch {
+        if (!embeddedArtwork) enrichArtwork(song);
+      } catch {
         rejected++;
       }
     }
-   if (files.length >= 2 && addedSongIds.length > 1) {
-  const now = Date.now();
-
-  const importedName = `Imported Music — ${new Date(now).toLocaleString([], {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  })}`;
-
-  const nextPlaylist: StoredPlaylist = {
-    id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
-    name: importedName,
-    songIds: addedSongIds,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  try {
-    await savePlaylist(nextPlaylist);
-
-    setPlaylists((items) => [nextPlaylist, ...items]);
-
-    toast(
-      `Created “${importedName}” for this import batch.`
-    );
-  } catch {
-    toast(
-      'The tracks imported, but the import playlist could not be saved.',
-      'error'
-    );
-  }
-}
+    if (files.length >= 2 && addedSongIds.length > 1) {
+      const importedName = 'Imported Music';
+      const existing = playlists.find((playlist) => playlist.name.trim().toLowerCase() === importedName.toLowerCase());
+      const nextPlaylist: StoredPlaylist = existing
+        ? { ...existing, songIds: [...existing.songIds, ...addedSongIds.filter((id) => !existing.songIds.includes(id))], updatedAt: Date.now() }
+        : { id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2), name: importedName, songIds: addedSongIds, createdAt: Date.now(), updatedAt: Date.now() };
       try {
         await savePlaylist(nextPlaylist);
         setPlaylists((items) => existing ? items.map((item) => item.id === existing.id ? nextPlaylist : item) : [nextPlaylist, ...items]);
