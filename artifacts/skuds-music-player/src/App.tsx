@@ -20,6 +20,7 @@ import {
 } from '@/lib/artwork';
 
 import { LyricsFeature } from '../LyricsFeature';
+import { autoFindArtwork } from '@/lib/artwork-auto';
 
 function MetadataDialog({
   song,
@@ -587,8 +588,23 @@ if (repeat === 'one' && currentId) {
         existingKeys.add(fileKey);
         added++;
         addedSongIds.push(id);
-        if (!embeddedArtwork) enrichArtwork(song);
-      } catch {
+void autoFindArtwork(song).then(async (result) => {
+  if (!result) return;
+
+  const updatedSong = {
+    ...song,
+    artwork: result.artwork,
+    artworkSource: 'automatic' as const,
+  };
+
+  await saveSong(updatedSong);
+
+  setSongs((items) =>
+    items.map((item) =>
+      item.id === song.id ? updatedSong : item
+    )
+  );
+});      } catch {
         rejected++;
       }
     }
