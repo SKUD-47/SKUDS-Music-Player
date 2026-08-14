@@ -519,7 +519,10 @@ if (repeat === 'one' && currentId) {
     toast(found ? `Found artwork for ${found} of ${checked} missing ${checked === 1 ? 'track' : 'tracks'}.` : 'No confident artwork matches were found.', found ? 'success' : 'error');
   }, [findArtwork, songs, toast]);
 
-  const importFiles = useCallback(async (input: FileList | File[]) => {
+  const importFiles = useCallback(async (
+  input: FileList | File[],
+  playlistName?: string,
+) => {
     const files = Array.from(input);
     if (!files.length) return;
     let added = 0; let duplicates = 0; let rejected = 0;
