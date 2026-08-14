@@ -616,6 +616,7 @@ if (!song.artwork) {
 // A single imported song goes directly into the library.
 if (addedSongIds.length > 1) {
 if (addedSongIds.length > 1) {
+if (addedSongIds.length > 1) {
   const importedNumber =
     playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
 
