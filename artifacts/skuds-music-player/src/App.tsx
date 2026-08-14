@@ -587,24 +587,26 @@ if (repeat === 'one' && currentId) {
         setSongs((items) => [song, ...items]);
         existingKeys.add(fileKey);
         added++;
-        addedSongIds.push(id);
-void autoFindArtwork(song).then(async (result) => {
-  if (!result) return;
+if (!song.artwork) {
+  void autoFindArtwork(song).then(async (result) => {
+    if (!result) return;
 
-  const updatedSong = {
-    ...song,
-    artwork: result.artwork,
-    artworkSource: 'automatic' as const,
-  };
+    const updatedSong = {
+      ...song,
+      artwork: result.artwork,
+      artworkSource: 'automatic' as const,
+    };
 
-  await saveSong(updatedSong);
+    await saveSong(updatedSong);
 
-  setSongs((items) =>
-    items.map((item) =>
-      item.id === song.id ? updatedSong : item
-    )
-  );
-});      } catch {
+    setSongs((items) =>
+      items.map((item) =>
+        item.id === song.id ? updatedSong : item
+      )
+    );
+  });
+}
+     } catch {
         rejected++;
       }
     }
