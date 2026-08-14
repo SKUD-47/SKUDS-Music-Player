@@ -612,28 +612,31 @@ if (!song.artwork) {
       }
     }
   
-    const importedNumber =
-      playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
+   // Only create an import playlist when importing multiple songs.
+// A single imported song goes directly into the library.
+if (addedSongIds.length > 1) {
+  const importedNumber =
+    playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
 
-    const newPlaylist: StoredPlaylist = {
-      id: crypto.randomUUID(),
-name: playlistName.trim(),
+  const newPlaylist: StoredPlaylist = {
+    id: crypto.randomUUID(),
+    name: `Imported Music ${importedNumber}`,
+    songIds: addedSongIds,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
 
-      songIds: addedSongIds,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    try {
-      await savePlaylist(newPlaylist);
-      setPlaylists((items) => [newPlaylist, ...items]);
-
-      toast(
-        `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`
-      );
-    } catch (error) {
-      console.error('Failed to create import playlist:', error);
-      toast('Songs imported, but the playlist could not be created.', 'error');
+  try {
+    await savePlaylist(newPlaylist);
+    setPlaylists((items) => [newPlaylist, ...items]);
+    toast(
+      `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`
+    );
+  } catch (error) {
+    console.error('Failed to create import playlist:', error);
+    toast('Songs imported, but the playlist could not be created.', 'error');
+  }
+}
     }
   }
 
