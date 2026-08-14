@@ -612,6 +612,33 @@ if (!song.artwork) {
       }
     }
       if (addedSongIds.length > 0) {
+  const playlistName = window.prompt(
+    'What do you want to name this playlist?',
+    'Imported Music'
+  );
+
+  if (!playlistName?.trim()) return;
+
+  const newPlaylist: StoredPlaylist = {
+    id: crypto.randomUUID(),
+    name: playlistName.trim(),
+    songIds: addedSongIds,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  try {
+    await savePlaylist(newPlaylist);
+    setPlaylists((items) => [newPlaylist, ...items]);
+
+    toast(
+      `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`
+    );
+  } catch (error) {
+    console.error('Failed to create import playlist:', error);
+    toast('Songs imported, but the playlist could not be created.', 'error');
+  }
+}
         const playlistName = window.prompt(
   'Name this playlist:',
   `Imported Music ${playlists.filter((p) =>
