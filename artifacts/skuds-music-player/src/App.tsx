@@ -518,7 +518,10 @@ if (repeat === 'one' && currentId) {
     toast(found ? `Found artwork for ${found} of ${checked} missing ${checked === 1 ? 'track' : 'tracks'}.` : 'No confident artwork matches were found.', found ? 'success' : 'error');
   }, [findArtwork, songs, toast]);
 
-  const importFiles = useCallback(async (input: FileList | File[]) => {
+const importFiles = useCallback(async (
+  input: FileList | File[],
+  playlistName?: string,
+) => {
     const files = Array.from(input);
     if (!files.length) return;
     let added = 0; let duplicates = 0; let rejected = 0;
@@ -617,12 +620,11 @@ if (!song.artwork) {
 if (addedSongIds.length > 1) {
 if (addedSongIds.length > 1) {
 if (addedSongIds.length > 1) {
-  const importedNumber =
-    playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
-
+ const newPlaylist: StoredPlaylist = {
+if (addedSongIds.length > 1 && playlistName?.trim()) {
   const newPlaylist: StoredPlaylist = {
     id: crypto.randomUUID(),
-    name: `Imported Music ${importedNumber}`,
+    name: playlistName.trim(),
     songIds: addedSongIds,
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -631,16 +633,15 @@ if (addedSongIds.length > 1) {
   try {
     await savePlaylist(newPlaylist);
     setPlaylists((items) => [newPlaylist, ...items]);
+
     toast(
-      `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`
+      `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`,
     );
   } catch (error) {
     console.error('Failed to create import playlist:', error);
     toast('Songs imported, but the playlist could not be created.', 'error');
   }
 }
-    }
-  }
 
    if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
@@ -708,7 +709,29 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
     </aside>
     <div className={sidebarCollapsed ? 'md:ml-[76px]' : 'md:ml-[248px]'}>
       <input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/>
-      <input ref={library.folderInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/>
+onChange={(event) => {
+  const files = event.target.files;
+
+  if (files?.length) {
+    const firstFile = files[0] as File & {
+      webkitRelativePath?: string;
+    };
+
+    const relativePath = firstFile.webkitRelativePath || '';
+    const folderName = relativePath.split('/')[0] || 'My Music';
+
+    const playlistName = window.prompt(
+      'What would you like to name this playlist?',
+      folderName,
+    );
+
+    if (playlistName?.trim()) {
+      void library.importFiles(files, playlistName.trim());
+    }
+  }
+
+  event.target.value = '';
+}}
       <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl sm:px-8">
         <div className="flex items-center gap-3"><button type="button" aria-label={mobileMenu ? 'Close navigation' : 'Toggle sidebar'} title={mobileMenu ? 'Close navigation' : 'Toggle sidebar'} className="button-icon" onClick={() => { if (window.matchMedia('(max-width: 767px)').matches) setMobileMenu((open) => !open); else setSidebarCollapsed((collapsed) => !collapsed); }}>{mobileMenu ? <X size={20}/> : <Menu size={20}/>}</button><div><div className="text-[10px] font-bold uppercase tracking-[.22em] text-primary">{eyebrow ?? 'Private listening room'}</div><h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1></div></div>
         <div className="flex items-center gap-2">{onImport && <button type="button" onClick={onImport} className="button-primary hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold sm:flex"><Upload size={16}/> Import Music</button>}<Link href="/settings" className="button-ghost rounded-xl p-2.5" aria-label="Settings"><SettingsIcon size={19}/></Link></div>
