@@ -21,6 +21,7 @@ import {
 
 import { LyricsFeature } from '../LyricsFeature';
 import { autoFindArtwork } from '@/lib/artwork-auto';
+import { openFolderPlaylistImporter } from './folderPlaylistImporter';
 
 function MetadataDialog({
   song,
@@ -657,7 +658,13 @@ if (addedSongIds.length > 1) {
   const removePlaylist = useCallback(async (id: string) => { await deletePlaylist(id); setPlaylists((items) => items.filter((item) => item.id !== id)); toast('Playlist deleted.'); }, [toast]);
   const removeSong = useCallback(async (id: string) => { await deleteSong(id); setSongs((items) => items.filter((item) => item.id !== id)); setQueue((items) => items.filter((item) => item !== id)); if (currentId === id) { audioRef.current?.pause(); setCurrentId(null); } toast('Track removed from your library.'); }, [currentId, toast]);
   const openImport = () => fileInputRef.current?.click();
-  const openFolder = () => { const input = folderInputRef.current; if (!input) return; input.setAttribute('webkitdirectory', ''); input.setAttribute('directory', ''); input.click(); };
+const openFolder = async () => {
+  const result = await openFolderPlaylistImporter();
+
+  if (!result) return;
+
+  void importFiles(result.files, result.playlistName);
+};
 
   const value: LibraryContextValue = { songs, playlists, loading, storageError, currentId, isPlaying, progress, duration, volume, visualizer, shuffle, repeat, queue, showQueue, setShowQueue, importFiles, openImport, openFolder, fileInputRef, folderInputRef, playSong, togglePlay, next, previous, seek, setVolume, setShuffle, cycleRepeat, toggleFavorite, addQueue, removeQueue, clearQueue, updateSong, updatePlaylist, createPlaylist, findArtwork, findMissingArtwork, removePlaylist, removeSong, toasts, dismissToast: (id) => setToasts((items) => items.filter((item) => item.id !== id)), toast };
   return <LibraryContext.Provider value={value}>{children}<audio aria-hidden="true" className="hidden"/><AppToasts toasts={toasts} dismiss={value.dismissToast}/></LibraryContext.Provider>;
