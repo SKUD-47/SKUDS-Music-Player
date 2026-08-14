@@ -612,6 +612,17 @@ if (!song.artwork) {
       }
     }
       if (addedSongIds.length > 0) {
+        const playlistName = window.prompt(
+  'Name this playlist:',
+  `Imported Music ${playlists.filter((p) =>
+    p.name.startsWith('Imported Music')
+  ).length + 1}`
+);
+
+if (!playlistName?.trim()) {
+  return;
+}
+
     const importedNumber =
       playlists.filter((p) => p.name.startsWith('Imported Music')).length + 1;
 
