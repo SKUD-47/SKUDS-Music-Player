@@ -212,10 +212,7 @@ type LibraryContextValue = {
   currentId: string | null; isPlaying: boolean; progress: number; duration: number; volume: number;
   visualizer: AnalyserNode | null;
   shuffle: boolean; repeat: RepeatMode; queue: string[]; showQueue: boolean; setShowQueue: (v: boolean) => void;
- importFiles: (
-  files: FileList | File[],
-  playlistName?: string,
-) => Promise<void>; openImport: () => void; openFolder: () => void;
+importFiles: (files: FileList | File[], playlistName?: string) => Promise<void>; openImport: () => void; openFolder: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>; folderInputRef: React.RefObject<HTMLInputElement | null>;
   playSong: (id: string, collection?: string[]) => void; togglePlay: () => void; next: () => void; previous: () => void;
   seek: (value: number) => void; setVolume: (value: number) => void; setShuffle: (v: boolean) => void; cycleRepeat: () => void;
@@ -618,12 +615,7 @@ if (!song.artwork) {
       }
     }
   
-   // Only create an import playlist when importing multiple songs.
-// A single imported song goes directly into the library.
-if (addedSongIds.length > 1) {
-if (addedSongIds.length > 1) {
-if (addedSongIds.length > 1) {
- const newPlaylist: StoredPlaylist = {
+// Create a playlist when a name was provided.
 if (addedSongIds.length > 1 && playlistName?.trim()) {
   const newPlaylist: StoredPlaylist = {
     id: crypto.randomUUID(),
@@ -632,6 +624,19 @@ if (addedSongIds.length > 1 && playlistName?.trim()) {
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
+
+  try {
+    await savePlaylist(newPlaylist);
+    setPlaylists((items) => [newPlaylist, ...items]);
+
+    toast(
+      `Created "${newPlaylist.name}" with ${addedSongIds.length} tracks.`,
+    );
+  } catch (error) {
+    console.error('Failed to create import playlist:', error);
+    toast('Songs imported, but the playlist could not be created.', 'error');
+  }
+}
 
   try {
     await savePlaylist(newPlaylist);
@@ -1024,6 +1029,7 @@ function SongsPage() {
   useEffect(() => { const onSearch = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.getElementById('song-search')?.focus(); } }; window.addEventListener('keydown', onSearch); return () => window.removeEventListener('keydown', onSearch); }, []);
   const filtered = useMemo(() => { const term = query.trim().toLowerCase(); return library.songs.filter((song) => !term || `${song.title} ${song.artist} ${song.album}`.toLowerCase().includes(term)); }, [library.songs, query]);
   return <Shell title="All songs" eyebrow={`${library.songs.length} ${library.songs.length === 1 ? 'track' : 'tracks'} in your room`} onImport={library.openImport}><input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/><input
+<input
   ref={library.folderInputRef}
   type="file"
   accept={ACCEPTED.join(',')}
@@ -1037,8 +1043,8 @@ function SongsPage() {
         webkitRelativePath?: string;
       };
 
-      const relativePath = firstFile.webkitRelativePath || '';
-      const folderName = relativePath.split('/')[0] || 'My Music';
+      const folderName =
+        firstFile.webkitRelativePath?.split('/')[0] || 'My Music';
 
       const playlistName = window.prompt(
         'What would you like to name this playlist?',
