@@ -20,6 +20,7 @@ import {
 } from '@/lib/artwork';
 
 import { LyricsFeature } from '../LyricsFeature';
+import { autoFindArtwork } from '@/lib/artwork-auto';
 
 function MetadataDialog({
   song,
