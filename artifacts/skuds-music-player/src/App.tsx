@@ -21,7 +21,6 @@ import {
 
 import { LyricsFeature } from '../LyricsFeature';
 import { autoFindArtwork } from '@/lib/artwork-auto';
-import { askForFolderPlaylist } from './folderPlaylistImporter';
 
 function MetadataDialog({
   song,
@@ -709,19 +708,7 @@ function Shell({ children, title, eyebrow, onImport }: { children: ReactNode; ti
     </aside>
     <div className={sidebarCollapsed ? 'md:ml-[76px]' : 'md:ml-[248px]'}>
       <input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/>
-      <input ref={library.folderInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => {
-  const files = event.target.files;
-
-  if (files?.length) {
-    const result = askForFolderPlaylist(files);
-
-    if (result) {
-      void library.importFiles(result.files);
-    }
-  }
-
-  event.target.value = '';
-}}/>
+      <input ref={library.folderInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/>
       <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl sm:px-8">
         <div className="flex items-center gap-3"><button type="button" aria-label={mobileMenu ? 'Close navigation' : 'Toggle sidebar'} title={mobileMenu ? 'Close navigation' : 'Toggle sidebar'} className="button-icon" onClick={() => { if (window.matchMedia('(max-width: 767px)').matches) setMobileMenu((open) => !open); else setSidebarCollapsed((collapsed) => !collapsed); }}>{mobileMenu ? <X size={20}/> : <Menu size={20}/>}</button><div><div className="text-[10px] font-bold uppercase tracking-[.22em] text-primary">{eyebrow ?? 'Private listening room'}</div><h1 className="font-display text-xl font-semibold tracking-tight sm:text-2xl">{title}</h1></div></div>
         <div className="flex items-center gap-2">{onImport && <button type="button" onClick={onImport} className="button-primary hidden items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold sm:flex"><Upload size={16}/> Import Music</button>}<Link href="/settings" className="button-ghost rounded-xl p-2.5" aria-label="Settings"><SettingsIcon size={19}/></Link></div>
