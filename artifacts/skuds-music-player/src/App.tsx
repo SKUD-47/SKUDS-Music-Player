@@ -611,19 +611,64 @@ if (!song.artwork) {
       }
     }
 if (addedSongIds.length > 0) {
-      const importedName = 'Imported Music';
-      const existing = playlists.find((playlist) => playlist.name.trim().toLowerCase() === importedName.toLowerCase());
-      const nextPlaylist: StoredPlaylist = existing
-        ? { ...existing, songIds: [...existing.songIds, ...addedSongIds.filter((id) => !existing.songIds.includes(id))], updatedAt: Date.now() }
-        : { id: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2), name: importedName, songIds: addedSongIds, createdAt: Date.now(), updatedAt: Date.now() };
-      try {
-        await savePlaylist(nextPlaylist);
-        setPlaylists((items) => existing ? items.map((item) => item.id === existing.id ? nextPlaylist : item) : [nextPlaylist, ...items]);
-        toast(existing ? 'Added this import batch to “Imported Music”.' : 'Created “Imported Music” for this import batch.');
-      } catch {
-        toast('The tracks imported, but the import playlist could not be saved.', 'error');
+  const importedName = 'Imported Music';
+
+  const existing = playlists.find(
+    (playlist) =>
+      playlist.name.trim().toLowerCase() === importedName.toLowerCase()
+  );
+
+  const playlist: StoredPlaylist = existing
+    ? {
+        ...existing,
+        songIds: [
+          ...existing.songIds,
+          ...addedSongIds.filter(
+            (id) => !existing.songIds.includes(id)
+          ),
+        ],
+        updatedAt: Date.now(),
       }
-    }
+    : {
+        id:
+          crypto.randomUUID?.() ??
+          Math.random().toString(36).slice(2),
+        name: importedName,
+        songIds: addedSongIds,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+  try {
+    await savePlaylist(playlist);
+
+    setPlaylists((current) => {
+      const alreadyExists = current.some(
+        (item) => item.id === playlist.id
+      );
+
+      if (alreadyExists) {
+        return current.map((item) =>
+          item.id === playlist.id ? playlist : item
+        );
+      }
+
+      return [playlist, ...current];
+    });
+
+    toast(
+      existing
+        ? `Added ${addedSongIds.length} tracks to “Imported Music”.`
+        : `Created “Imported Music” with ${addedSongIds.length} tracks.`
+    );
+  } catch (error) {
+    console.error('Failed to create import playlist:', error);
+    toast(
+      'The songs imported, but the playlist could not be created.',
+      'error'
+    );
+  }
+}
     if (added) toast(`${added} ${added === 1 ? 'track' : 'tracks'} added to your library.`);
     if (duplicates) toast(`${duplicates} duplicate ${duplicates === 1 ? 'file was' : 'files were'} skipped.`);
     if (rejected) toast(`${rejected} file${rejected === 1 ? '' : 's'} could not be imported.`, 'error');
