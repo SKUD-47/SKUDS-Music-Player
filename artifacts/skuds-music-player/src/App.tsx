@@ -212,7 +212,10 @@ type LibraryContextValue = {
   currentId: string | null; isPlaying: boolean; progress: number; duration: number; volume: number;
   visualizer: AnalyserNode | null;
   shuffle: boolean; repeat: RepeatMode; queue: string[]; showQueue: boolean; setShowQueue: (v: boolean) => void;
-  importFiles: (files: FileList | File[]) => Promise<void>; openImport: () => void; openFolder: () => void;
+ importFiles: (
+  files: FileList | File[],
+  playlistName?: string,
+) => Promise<void>; openImport: () => void; openFolder: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>; folderInputRef: React.RefObject<HTMLInputElement | null>;
   playSong: (id: string, collection?: string[]) => void; togglePlay: () => void; next: () => void; previous: () => void;
   seek: (value: number) => void; setVolume: (value: number) => void; setShuffle: (v: boolean) => void; cycleRepeat: () => void;
@@ -1020,7 +1023,36 @@ function SongsPage() {
   const findSongShortcut = getFindSongShortcutLabel();
   useEffect(() => { const onSearch = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); document.getElementById('song-search')?.focus(); } }; window.addEventListener('keydown', onSearch); return () => window.removeEventListener('keydown', onSearch); }, []);
   const filtered = useMemo(() => { const term = query.trim().toLowerCase(); return library.songs.filter((song) => !term || `${song.title} ${song.artist} ${song.album}`.toLowerCase().includes(term)); }, [library.songs, query]);
-  return <Shell title="All songs" eyebrow={`${library.songs.length} ${library.songs.length === 1 ? 'track' : 'tracks'} in your room`} onImport={library.openImport}><input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/><input ref={library.folderInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="max-w-xl text-sm leading-6 text-muted-foreground">Every track you import lives here, searchable by title, artist, or album.</p></div><div className="relative sm:w-[290px]"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><input id="song-search" data-testid="input-song-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your library" className="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-16 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"/><kbd className="absolute right-3 top-1/2 -translate-y-1/2">{findSongShortcut}</kbd></div></div><div onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); void library.importFiles(event.dataTransfer.files); }} className={`mt-7 rounded-2xl border border-dashed p-3 transition-colors ${dragging ? 'border-primary bg-primary/10' : 'border-border/80'}`}><div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground"><span className="flex items-center gap-2"><Download size={14} className={dragging ? 'text-primary' : ''}/>{dragging ? 'Release to import your files' : 'Drop audio files anywhere in this area to import'}</span><button type="button" onClick={library.openFolder} className="button-ghost hidden items-center gap-1 rounded-lg px-2 py-1 sm:flex"><FolderOpen size={14}/> Choose folder</button></div></div>{library.loading ? <SkeletonList/> : filtered.length ? <TrackList songs={filtered} onAddPlaylist={setPlaylistSong}/> : library.songs.length ? <div className="mt-6"><EmptyState title="No matches found" description="Try a different title, artist, or album name." icon={Search}/></div> : <div className="mt-6"><EmptyState title="Your library is empty" description="Import music from your computer or USB drive to get started." onImport={library.openImport} icon={FileAudio}/></div>}<Footer/>{playlistSong && <AddToPlaylistDialog song={playlistSong} onClose={() => setPlaylistSong(null)}/>}</Shell>;
+  return <Shell title="All songs" eyebrow={`${library.songs.length} ${library.songs.length === 1 ? 'track' : 'tracks'} in your room`} onImport={library.openImport}><input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/><input
+  ref={library.folderInputRef}
+  type="file"
+  accept={ACCEPTED.join(',')}
+  multiple
+  hidden
+  onChange={(event) => {
+    const files = event.target.files;
+
+    if (files?.length) {
+      const firstFile = files[0] as File & {
+        webkitRelativePath?: string;
+      };
+
+      const relativePath = firstFile.webkitRelativePath || '';
+      const folderName = relativePath.split('/')[0] || 'My Music';
+
+      const playlistName = window.prompt(
+        'What would you like to name this playlist?',
+        folderName,
+      );
+
+      if (playlistName?.trim()) {
+        void library.importFiles(files, playlistName.trim());
+      }
+    }
+
+    event.target.value = '';
+  }}
+/><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="max-w-xl text-sm leading-6 text-muted-foreground">Every track you import lives here, searchable by title, artist, or album.</p></div><div className="relative sm:w-[290px]"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><input id="song-search" data-testid="input-song-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your library" className="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-16 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"/><kbd className="absolute right-3 top-1/2 -translate-y-1/2">{findSongShortcut}</kbd></div></div><div onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); void library.importFiles(event.dataTransfer.files); }} className={`mt-7 rounded-2xl border border-dashed p-3 transition-colors ${dragging ? 'border-primary bg-primary/10' : 'border-border/80'}`}><div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground"><span className="flex items-center gap-2"><Download size={14} className={dragging ? 'text-primary' : ''}/>{dragging ? 'Release to import your files' : 'Drop audio files anywhere in this area to import'}</span><button type="button" onClick={library.openFolder} className="button-ghost hidden items-center gap-1 rounded-lg px-2 py-1 sm:flex"><FolderOpen size={14}/> Choose folder</button></div></div>{library.loading ? <SkeletonList/> : filtered.length ? <TrackList songs={filtered} onAddPlaylist={setPlaylistSong}/> : library.songs.length ? <div className="mt-6"><EmptyState title="No matches found" description="Try a different title, artist, or album name." icon={Search}/></div> : <div className="mt-6"><EmptyState title="Your library is empty" description="Import music from your computer or USB drive to get started." onImport={library.openImport} icon={FileAudio}/></div>}<Footer/>{playlistSong && <AddToPlaylistDialog song={playlistSong} onClose={() => setPlaylistSong(null)}/>}</Shell>;
 }
 
 function TrackList({ songs, compact = false, onAddPlaylist }: { songs: StoredSong[]; compact?: boolean; onAddPlaylist?: (song: StoredSong) => void }) {
