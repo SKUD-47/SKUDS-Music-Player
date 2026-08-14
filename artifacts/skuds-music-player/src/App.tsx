@@ -626,8 +626,7 @@ if (addedSongIds.length > 1) {
 
   const newPlaylist: StoredPlaylist = {
     id: crypto.randomUUID(),
-    name: `Imported Music ${importedNumber}`,
-    songIds: addedSongIds,
+name: playlistName?.trim() || `Imported Music ${importedNumber}`,    songIds: addedSongIds,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
