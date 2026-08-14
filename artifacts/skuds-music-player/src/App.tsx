@@ -588,27 +588,8 @@ if (repeat === 'one' && currentId) {
         existingKeys.add(fileKey);
         added++;
         addedSongIds.push(id);
-void autoFindArtwork(song).then(async (result) => {
-  if (!result) return;
-
-  setSongs((items) => {
-    const latest = items.find((item) => item.id === song.id);
-
-    if (!latest || latest.artworkLocked) return items;
-
-    const next = {
-      ...latest,
-      artwork: result.artwork,
-      artworkSource: 'automatic' as const,
-    };
-
-    void saveSong(next).catch(() => undefined);
-
-    return items.map((item) =>
-      item.id === song.id ? next : item
-    );
-  });
-});      } catch {
+        if (!embeddedArtwork) enrichArtwork(song);
+      } catch {
         rejected++;
       }
     }
