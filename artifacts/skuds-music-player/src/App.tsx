@@ -608,8 +608,12 @@ void autoFindArtwork(song).then(async (result) => {
         rejected++;
       }
     }
-    if (files.length >= 2 && addedSongIds.length > 1) {
-      const importedName = 'Imported Music';
+   if (files.length >= 2 && addedSongIds.length > 1) {
+  const firstFile = files[0] as File & { webkitRelativePath?: string };
+
+  const importedName =
+    firstFile.webkitRelativePath?.split('/')[0]?.trim() ||
+    'Imported Music';
       const existing = playlists.find((playlist) => playlist.name.trim().toLowerCase() === importedName.toLowerCase());
       const nextPlaylist: StoredPlaylist = existing
         ? { ...existing, songIds: [...existing.songIds, ...addedSongIds.filter((id) => !existing.songIds.includes(id))], updatedAt: Date.now() }
