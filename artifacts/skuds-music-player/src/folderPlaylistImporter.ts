@@ -4,7 +4,9 @@ export type FolderImportResult = {
 };
 
 export function openFolderPlaylistImporter(): Promise<FolderImportResult | null> {
-  console.log('🔥 FOLDER IMPORTER CALLED');  return new Promise((resolve) => {
+  console.log('🔥 FOLDER IMPORTER CALLED');
+
+  return new Promise((resolve) => {
     const input = document.createElement('input');
 
     input.type = 'file';
@@ -58,4 +60,36 @@ export function openFolderPlaylistImporter(): Promise<FolderImportResult | null>
 
     input.click();
   });
+}
+
+
+// NEW: handles normal imports of 4+ songs
+export function askForPlaylistForFiles(
+  files: FileList | File[],
+): { files: File[]; playlistName: string } | null {
+  const fileArray = Array.from(files);
+
+  // 1–3 songs: import normally, no playlist prompt.
+  if (fileArray.length <= 3) {
+    return {
+      files: fileArray,
+      playlistName: '',
+    };
+  }
+
+  // 4+ songs: ask for a playlist name.
+  const playlistName = window.prompt(
+    'You imported 4 or more songs. What would you like to name this playlist?',
+    'My Playlist',
+  );
+
+  // Cancel = don't import.
+  if (!playlistName?.trim()) {
+    return null;
+  }
+
+  return {
+    files: fileArray,
+    playlistName: playlistName.trim(),
+  };
 }
