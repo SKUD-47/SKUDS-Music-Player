@@ -593,7 +593,7 @@ if (repeat === 'one' && currentId) {
       }
     }
     if (files.length >= 2 && addedSongIds.length > 1) {
- if (files.length >= 2 && addedSongIds.length > 1) {
+if (files.length >= 2 && addedSongIds.length > 1) {
   const importedName = 'Imported Music';
 
   const nextPlaylist: StoredPlaylist = {
@@ -606,8 +606,10 @@ if (repeat === 'one' && currentId) {
 
   try {
     await savePlaylist(nextPlaylist);
+
     setPlaylists((items) => [nextPlaylist, ...items]);
-    toast('Created “Imported Music” for this import batch.');
+
+    toast('Created a new “Imported Music” playlist for this import batch.');
   } catch {
     toast('The tracks imported, but the import playlist could not be saved.', 'error');
   }
