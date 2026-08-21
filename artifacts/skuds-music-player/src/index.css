@@ -291,6 +291,9 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   justify-content: center;
 
   box-sizing: border-box;
+
+  /* Extra room for the dB value */
+  padding-top: 18px;
 }
 
 /* TRACK */
@@ -298,7 +301,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-line {
   position: absolute;
 
-  top: 5px;
+  top: 23px;
   bottom: 5px;
 
   width: 2px;
@@ -329,7 +332,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-slider {
   position: absolute;
 
-  top: 50%;
+  top: calc(50% + 9px);
   left: 50%;
 
   width: 122px;
@@ -402,27 +405,26 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 /* =========================
    dB VALUE
    =========================
-   This gets its OWN space above
-   the slider so the knob can never
-   cover the number.
+   Always sits directly above
+   its own slider.
 */
 
 .eq-value {
   position: absolute;
 
-  top: -24px;
+  top: 0;
   left: 50%;
 
   transform: translateX(-50%);
 
-  width: 36px;
-  height: 11px;
+  width: 40px;
+  height: 16px;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  color: rgba(255, 255, 255, 0.78);
+  color: rgba(255, 255, 255, 0.82);
 
   font-size: 7px;
   font-weight: 600;
@@ -430,6 +432,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   text-align: center;
   white-space: nowrap;
+
+  font-variant-numeric: tabular-nums;
 
   pointer-events: none;
   z-index: 10;
@@ -517,15 +521,22 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   .slider-area {
     height: 112px;
+    padding-top: 17px;
   }
 
   .eq-slider {
     width: 112px;
+    top: calc(50% + 8px);
+  }
+
+  .eq-line {
+    top: 22px;
   }
 
   .eq-value {
-    top: -24px;
-    width: 36px;
+    top: 0;
+    width: 40px;
+    height: 15px;
     font-size: 7px;
   }
 
