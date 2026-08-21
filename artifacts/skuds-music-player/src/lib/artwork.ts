@@ -185,9 +185,14 @@ export async function prepareArtwork(blob: Blob, focusX = 0.5, focusY = 0.5) {
       element.onerror = () => reject(new Error('This image could not be prepared.'));
       element.src = url;
     });
-    const cropSize = Math.min(info.width, info.height);
-    const sourceX = Math.max(0, Math.min(info.width - cropSize, (info.width - cropSize) * focusX));
-    const sourceY = Math.max(0, Math.min(info.height - cropSize, (info.height - cropSize) * focusY));
+   const zoom = 1.25;
+const cropSize = Math.min(info.width, info.height) / zoom;
+
+const maxX = info.width - cropSize;
+const maxY = info.height - cropSize;
+
+const sourceX = Math.max(0, Math.min(maxX, maxX * focusX));
+const sourceY = Math.max(0, Math.min(maxY, maxY * focusY));
     const outputSize = Math.min(2048, cropSize);
     const canvas = document.createElement('canvas');
     canvas.width = outputSize;
