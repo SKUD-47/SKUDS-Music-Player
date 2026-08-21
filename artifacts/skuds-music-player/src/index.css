@@ -291,9 +291,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   justify-content: center;
 
   box-sizing: border-box;
-
-  /* Extra room for the dB value */
-  padding-top: 18px;
 }
 
 /* TRACK */
@@ -301,7 +298,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-line {
   position: absolute;
 
-  top: 23px;
+  top: 5px;
   bottom: 5px;
 
   width: 2px;
@@ -332,7 +329,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-slider {
   position: absolute;
 
-  top: calc(50% + 9px);
+  top: 50%;
   left: 50%;
 
   width: 122px;
@@ -405,20 +402,20 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 /* =========================
    dB VALUE
    =========================
-   Always sits directly above
-   its own slider.
+   Fixed directly above each
+   individual EQ slider.
 */
 
 .eq-value {
   position: absolute;
 
-  top: 0;
+  top: -1px;
   left: 50%;
 
   transform: translateX(-50%);
 
-  width: 40px;
-  height: 16px;
+  width: 42px;
+  height: 12px;
 
   display: flex;
   align-items: center;
@@ -428,7 +425,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   font-size: 7px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 12px;
 
   text-align: center;
   white-space: nowrap;
@@ -521,23 +518,18 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   .slider-area {
     height: 112px;
-    padding-top: 17px;
   }
 
   .eq-slider {
     width: 112px;
-    top: calc(50% + 8px);
-  }
-
-  .eq-line {
-    top: 22px;
   }
 
   .eq-value {
-    top: 0;
-    width: 40px;
-    height: 15px;
+    top: -1px;
+    width: 42px;
+    height: 12px;
     font-size: 7px;
+    line-height: 12px;
   }
 
   .eq-frequency {
