@@ -508,6 +508,49 @@ if (repeat === 'one' && currentId) {
   }, [currentId, toast]);
 
   useEffect(() => {
+  if (!currentId) return;
+
+  const filters = equalizerFiltersRef.current;
+  if (!filters.length) return;
+
+  try {
+    const saved = localStorage.getItem(
+      "skuds-equalizer-settings"
+    );
+
+    if (!saved) {
+      filters.forEach((filter) => {
+        filter.gain.value = 0;
+      });
+      return;
+    }
+
+    const allSettings = JSON.parse(saved);
+    const songSettings = allSettings[currentId];
+
+    if (!songSettings?.values) {
+      filters.forEach((filter) => {
+        filter.gain.value = 0;
+      });
+      return;
+    }
+
+    songSettings.values.forEach(
+      (value: number, index: number) => {
+        if (filters[index]) {
+          filters[index].gain.value =
+            songSettings.enabled ? value : 0;
+        }
+      }
+    );
+  } catch {
+    filters.forEach((filter) => {
+      filter.gain.value = 0;
+    });
+  }
+}, [currentId]);
+
+  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
