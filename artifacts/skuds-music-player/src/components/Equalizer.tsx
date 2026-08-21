@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 const bands = [
   { freq: 60, label: "60" },
@@ -23,105 +23,17 @@ const presets: Record<string, number[]> = {
 };
 
 type EqualizerProps = {
-  audioRef: React.RefObject<HTMLAudioElement | null>;
+  onBandChange?: (index: number, value: number) => void;
 };
 
-export default function Equalizer({ audioRef }: EqualizerProps) {
+export default function Equalizer({
+  onBandChange,
+}: EqualizerProps) {
   const [enabled, setEnabled] = useState(true);
   const [values, setValues] = useState<number[]>(presets.flat);
   const [preset, setPreset] = useState("flat");
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const filtersRef = useRef<BiquadFilterNode[]>([]);
-
-  /*
-   * Create the Web Audio EQ chain.
-   *
-   * audio element
-   *      ↓
-   * 60Hz filter
-   *      ↓
-   * 120Hz filter
-   *      ↓
-   * ...
-   *      ↓
-   * 16kHz filter
-   *      ↓
-   * speakers
-   */
-  useEffect(() => {
-    const audio = audioRef.current;
-
-    if (!audio) return;
-
-    try {
-      const context = new AudioContext();
-
-      const source = context.createMediaElementSource(audio);
-
-      const filters = bands.map((band) => {
-        const filter = context.createBiquadFilter();
-
-        filter.type = "peaking";
-        filter.frequency.value = band.freq;
-        filter.Q.value = 1;
-        filter.gain.value = 0;
-
-        return filter;
-      });
-
-      source.connect(filters[0]);
-
-      for (let i = 0; i < filters.length - 1; i++) {
-        filters[i].connect(filters[i + 1]);
-      }
-
-      filters[filters.length - 1].connect(context.destination);
-
-      audioContextRef.current = context;
-      sourceRef.current = source;
-      filtersRef.current = filters;
-
-      return () => {
-        filters.forEach((filter) => filter.disconnect());
-        source.disconnect();
-        context.close();
-
-        audioContextRef.current = null;
-        sourceRef.current = null;
-        filtersRef.current = [];
-      };
-    } catch (error) {
-      console.error("Equalizer setup failed:", error);
-    }
-  }, [audioRef]);
-
-  /*
-   * Update the actual audio filters whenever
-   * a slider changes.
-   */
-  useEffect(() => {
-    filtersRef.current.forEach((filter, index) => {
-      filter.gain.value = enabled ? values[index] : 0;
-    });
-  }, [values, enabled]);
-
-  /*
-   * Resume AudioContext when the user interacts
-   * with the EQ.
-   */
-  function resumeAudio() {
-    const context = audioContextRef.current;
-
-    if (context && context.state === "suspended") {
-      context.resume().catch(() => {});
-    }
-  }
-
   function updateBand(index: number, value: number) {
-    resumeAudio();
-
     setPreset("custom");
 
     setValues((current) => {
@@ -129,28 +41,44 @@ export default function Equalizer({ audioRef }: EqualizerProps) {
       next[index] = value;
       return next;
     });
+
+    onBandChange?.(index, enabled ? value : 0);
   }
 
   function changePreset(name: string) {
-    resumeAudio();
-
     setPreset(name);
 
-    if (presets[name]) {
-      setValues([...presets[name]]);
-    }
+    const next = presets[name];
+
+    if (!next) return;
+
+    setValues([...next]);
+
+    next.forEach((value, index) => {
+      onBandChange?.(index, enabled ? value : 0);
+    });
   }
 
   function reset() {
-    resumeAudio();
-
     setPreset("flat");
     setValues([...presets.flat]);
+
+    presets.flat.forEach((value, index) => {
+      onBandChange?.(index, enabled ? value : 0);
+    });
   }
 
   function toggleEnabled() {
-    resumeAudio();
-    setEnabled((current) => !current);
+    const nextEnabled = !enabled;
+
+    setEnabled(nextEnabled);
+
+    values.forEach((value, index) => {
+      onBandChange?.(
+        index,
+        nextEnabled ? value : 0
+      );
+    });
   }
 
   return (
@@ -244,10 +172,7 @@ export default function Equalizer({ audioRef }: EqualizerProps) {
           </option>
         </select>
 
-        <button
-          type="button"
-          onClick={reset}
-        >
+        <button type="button" onClick={reset}>
           Reset
         </button>
       </div>
