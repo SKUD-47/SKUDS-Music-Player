@@ -80,8 +80,34 @@ export default function Equalizer({
   /*
    * Load the EQ settings whenever the song changes.
    */
-  useEffect(() => {
-    const saved = getSavedSettings(songId);
+ useEffect(() => {
+  const saved = getSavedSettings(songId);
+
+  if (saved) {
+    setValues(saved.values);
+    setEnabled(saved.enabled);
+    setPreset(saved.preset);
+
+    saved.values.forEach((value, index) => {
+      onBandChange?.(
+        index,
+        saved.enabled ? value : 0
+      );
+    });
+
+    return;
+  }
+
+  const flat = [...presets.flat];
+
+  setValues(flat);
+  setEnabled(true);
+  setPreset("flat");
+
+  flat.forEach((value, index) => {
+    onBandChange?.(index, value);
+  });
+}, [songId, onBandChange]);
 
     if (saved) {
       setValues(saved.values);
