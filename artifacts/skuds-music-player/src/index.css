@@ -163,18 +163,14 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   max-width: 410px;
   margin: 0 auto;
   box-sizing: border-box;
-
   padding: 13px 15px 11px;
 
   border-radius: 16px;
-
   background: rgba(30, 34, 31, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.07);
-
   color: #f1f3f1;
 
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
 }
 
 /* HEADER */
@@ -206,22 +202,18 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   width: 34px;
   height: 19px;
   padding: 2px;
-
   border: none;
   border-radius: 999px;
 
   background: rgba(255, 255, 255, 0.12);
-
   cursor: pointer;
   transition: background 0.2s ease;
 }
 
 .eq-switch span {
   display: block;
-
   width: 15px;
   height: 15px;
-
   border-radius: 50%;
 
   background: rgba(255, 255, 255, 0.55);
@@ -252,7 +244,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 .db-scale {
   width: 24px;
-
   padding: 2px 0 18px;
 
   display: flex;
@@ -274,7 +265,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   display: flex;
   justify-content: space-between;
-
   gap: 2px;
 
   min-width: 0;
@@ -299,9 +289,11 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   display: flex;
   justify-content: center;
+
+  box-sizing: border-box;
 }
 
-/* VERTICAL TRACK */
+/* TRACK */
 
 .eq-line {
   position: absolute;
@@ -310,13 +302,10 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   bottom: 5px;
 
   width: 2px;
-
   border-radius: 2px;
 
   background: rgba(255, 255, 255, 0.20);
 }
-
-/* CENTER MARK */
 
 .eq-line::before {
   content: "";
@@ -332,7 +321,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   transform: translate(-50%, -50%);
 
   border-radius: 50%;
-
   background: rgba(255, 255, 255, 0.28);
 }
 
@@ -355,11 +343,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   -webkit-appearance: none;
 
   background: transparent;
-
   cursor: pointer;
 }
-
-/* TRACK */
 
 .eq-slider::-webkit-slider-runnable-track {
   height: 2px;
@@ -371,7 +356,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   background: transparent;
 }
 
-/* THUMB */
+/* GREEN KNOB */
 
 .eq-slider::-webkit-slider-thumb {
   appearance: none;
@@ -414,34 +399,40 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   opacity: 0.3;
 }
 
-/* VALUE
-   Positioned ABOVE the knob so they never overlap.
+/* =========================
+   dB VALUE
+   =========================
+   This gets its OWN space above
+   the slider so the knob can never
+   cover the number.
 */
 
 .eq-value {
   position: absolute;
 
-  top: -13px;
+  top: -24px;
   left: 50%;
 
   transform: translateX(-50%);
 
-  min-width: 30px;
+  width: 36px;
+  height: 11px;
 
-  color: rgba(255, 255, 255, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: rgba(255, 255, 255, 0.78);
 
   font-size: 7px;
   font-weight: 600;
-
   line-height: 1;
 
   text-align: center;
-
   white-space: nowrap;
 
   pointer-events: none;
-
-  z-index: 2;
+  z-index: 10;
 }
 
 /* FREQUENCY */
@@ -455,7 +446,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   font-weight: 500;
 
   line-height: 1;
-
   white-space: nowrap;
 }
 
@@ -463,7 +453,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
 .eq-footer {
   display: flex;
-
   align-items: center;
   justify-content: space-between;
 
@@ -487,12 +476,18 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   color: rgba(255, 255, 255, 0.68);
 
   font-size: 8px;
-
   outline: none;
 }
 
 .eq-footer select {
   cursor: pointer;
+}
+
+/* DARK DROPDOWN */
+
+.eq-footer select option {
+  background: #1e221f;
+  color: #f1f3f1;
 }
 
 .eq-footer button {
@@ -506,16 +501,6 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-footer button:hover {
   background: rgba(255, 255, 255, 0.11);
   color: white;
-}
-
-/* IMPORTANT:
-   Makes the native dropdown itself dark too.
-   This fixes the white menu problem.
-*/
-
-.eq-footer select option {
-  background: #1e221f;
-  color: #f1f3f1;
 }
 
 /* MOBILE */
@@ -539,7 +524,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   }
 
   .eq-value {
-    top: -13px;
+    top: -24px;
+    width: 36px;
     font-size: 7px;
   }
 
