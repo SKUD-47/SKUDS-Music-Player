@@ -829,7 +829,9 @@ return <div className="dialog-backdrop fixed inset-0 z-[55] flex items-center ju
 </div>
 
 <div className="mt-6 w-full">
-<Equalizer audioRef={audioRef} /></div>
+<Equalizer
+  onBandChange={library.setEqualizerBand}
+/></div>
 
 </div>
 </div>;  const details = [
