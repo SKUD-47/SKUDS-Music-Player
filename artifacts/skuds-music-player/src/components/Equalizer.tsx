@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const bands = [
   { freq: 60, label: "60" },
@@ -23,48 +23,165 @@ const presets: Record<string, number[]> = {
 };
 
 type EqualizerProps = {
+  songId?: string;
   onBandChange?: (index: number, value: number) => void;
 };
 
+type SavedEQ = {
+  values: number[];
+  enabled: boolean;
+  preset: string;
+};
+
+const STORAGE_KEY = "skuds-equalizer-settings";
+
+function getSavedSettings(songId?: string): SavedEQ | null {
+  if (!songId) return null;
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) return null;
+
+    const allSettings = JSON.parse(saved);
+
+    return allSettings[songId] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSettings(songId: string, settings: SavedEQ) {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const allSettings = saved ? JSON.parse(saved) : {};
+
+    allSettings[songId] = settings;
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(allSettings)
+    );
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function Equalizer({
+  songId,
   onBandChange,
 }: EqualizerProps) {
   const [enabled, setEnabled] = useState(true);
-  const [values, setValues] = useState<number[]>(presets.flat);
+  const [values, setValues] = useState<number[]>([
+    ...presets.flat,
+  ]);
   const [preset, setPreset] = useState("flat");
 
-  function updateBand(index: number, value: number) {
-    setPreset("custom");
+  /*
+   * Load the EQ settings whenever the song changes.
+   */
+  useEffect(() => {
+    const saved = getSavedSettings(songId);
 
-    setValues((current) => {
-      const next = [...current];
-      next[index] = value;
-      return next;
+    if (saved) {
+      setValues(saved.values);
+      setEnabled(saved.enabled);
+      setPreset(saved.preset);
+
+      saved.values.forEach((value, index) => {
+        onBandChange?.(
+          index,
+          saved.enabled ? value : 0
+        );
+      });
+
+      return;
+    }
+
+    // No saved settings = start flat
+    setValues([...presets.flat]);
+    setEnabled(true);
+    setPreset("flat");
+
+    presets.flat.forEach((value, index) => {
+      onBandChange?.(index, value);
     });
+  }, [songId]);
 
-    onBandChange?.(index, enabled ? value : 0);
+  function saveCurrent(
+    nextValues: number[],
+    nextEnabled: boolean,
+    nextPreset: string
+  ) {
+    if (!songId) return;
+
+    saveSettings(songId, {
+      values: nextValues,
+      enabled: nextEnabled,
+      preset: nextPreset,
+    });
+  }
+
+  function updateBand(index: number, value: number) {
+    const nextValues = [...values];
+    nextValues[index] = value;
+
+    setPreset("custom");
+    setValues(nextValues);
+
+    saveCurrent(
+      nextValues,
+      enabled,
+      "custom"
+    );
+
+    onBandChange?.(
+      index,
+      enabled ? value : 0
+    );
   }
 
   function changePreset(name: string) {
-    setPreset(name);
-
     const next = presets[name];
 
     if (!next) return;
 
-    setValues([...next]);
+    const nextValues = [...next];
 
-    next.forEach((value, index) => {
-      onBandChange?.(index, enabled ? value : 0);
+    setPreset(name);
+    setValues(nextValues);
+
+    saveCurrent(
+      nextValues,
+      enabled,
+      name
+    );
+
+    nextValues.forEach((value, index) => {
+      onBandChange?.(
+        index,
+        enabled ? value : 0
+      );
     });
   }
 
   function reset() {
-    setPreset("flat");
-    setValues([...presets.flat]);
+    const nextValues = [...presets.flat];
 
-    presets.flat.forEach((value, index) => {
-      onBandChange?.(index, enabled ? value : 0);
+    setPreset("flat");
+    setValues(nextValues);
+
+    saveCurrent(
+      nextValues,
+      enabled,
+      "flat"
+    );
+
+    nextValues.forEach((value, index) => {
+      onBandChange?.(
+        index,
+        enabled ? value : 0
+      );
     });
   }
 
@@ -72,6 +189,12 @@ export default function Equalizer({
     const nextEnabled = !enabled;
 
     setEnabled(nextEnabled);
+
+    saveCurrent(
+      values,
+      nextEnabled,
+      preset
+    );
 
     values.forEach((value, index) => {
       onBandChange?.(
@@ -86,7 +209,9 @@ export default function Equalizer({
       <div className="eq-header">
         <div>
           <div className="eq-title">Equalizer</div>
-          <div className="eq-subtitle">10 BAND</div>
+          <div className="eq-subtitle">
+            10 BAND
+          </div>
         </div>
 
         <button
@@ -164,7 +289,9 @@ export default function Equalizer({
         >
           <option value="flat">Flat</option>
           <option value="bass">Bass Boost</option>
-          <option value="treble">Treble Boost</option>
+          <option value="treble">
+            Treble Boost
+          </option>
           <option value="vocal">Vocal</option>
           <option value="rock">Rock</option>
           <option value="electronic">
