@@ -298,7 +298,8 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-line {
   position: absolute;
 
-  top: 5px;
+  /* Leave dedicated space for dB values */
+  top: 20px;
   bottom: 5px;
 
   width: 2px;
@@ -329,10 +330,10 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 .eq-slider {
   position: absolute;
 
-  top: 50%;
+  top: calc(50% + 7px);
   left: 50%;
 
-  width: 122px;
+  width: 102px;
   height: 18px;
 
   transform:
@@ -402,20 +403,20 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 /* =========================
    dB VALUE
    =========================
-   Fixed directly above each
-   individual EQ slider.
+   Dedicated space above
+   each individual slider.
 */
 
 .eq-value {
   position: absolute;
 
-  top: -1px;
+  top: 0;
   left: 50%;
 
   transform: translateX(-50%);
 
-  width: 42px;
-  height: 12px;
+  width: 44px;
+  height: 14px;
 
   display: flex;
   align-items: center;
@@ -425,7 +426,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
 
   font-size: 7px;
   font-weight: 600;
-  line-height: 12px;
+  line-height: 14px;
 
   text-align: center;
   white-space: nowrap;
@@ -433,7 +434,7 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   font-variant-numeric: tabular-nums;
 
   pointer-events: none;
-  z-index: 10;
+  z-index: 20;
 }
 
 /* FREQUENCY */
@@ -520,16 +521,21 @@ button:disabled { cursor: not-allowed; opacity: .45; }
     height: 112px;
   }
 
+  .eq-line {
+    top: 18px;
+  }
+
   .eq-slider {
-    width: 112px;
+    width: 92px;
+    top: calc(50% + 6px);
   }
 
   .eq-value {
-    top: -1px;
-    width: 42px;
-    height: 12px;
+    top: 0;
+    width: 44px;
+    height: 14px;
     font-size: 7px;
-    line-height: 12px;
+    line-height: 14px;
   }
 
   .eq-frequency {
