@@ -33,6 +33,7 @@ type EqualizerProps = {
 
 type SavedEQ = {
   values: number[];
+  customValues: number[];
   enabled: boolean;
   preset: string;
 };
@@ -48,8 +49,20 @@ function getSavedSettings(songId?: string): SavedEQ | null {
     if (!saved) return null;
 
     const allSettings = JSON.parse(saved);
+    const settings = allSettings[songId];
 
-    return allSettings[songId] ?? null;
+    if (!settings) return null;
+
+    return {
+      values: settings.values ?? [...presets.flat],
+      customValues:
+        settings.customValues ??
+        [...presets.flat],
+      enabled:
+        settings.enabled ?? true,
+      preset:
+        settings.preset ?? "flat",
+    };
   } catch {
     return null;
   }
@@ -81,6 +94,15 @@ export default function Equalizer({
     ...presets.flat,
   ]);
 
+  /*
+   * Custom gets its own separate values.
+   * Presets will never overwrite this.
+   */
+  const [customValues, setCustomValues] =
+    useState<number[]>([
+      ...presets.flat,
+    ]);
+
   const [preset, setPreset] = useState("flat");
 
   /*
@@ -90,7 +112,13 @@ export default function Equalizer({
     const saved = getSavedSettings(songId);
 
     if (saved) {
+      const savedCustomValues = [
+        ...(saved.customValues ??
+          presets.flat),
+      ];
+
       setValues([...saved.values]);
+      setCustomValues(savedCustomValues);
       setEnabled(saved.enabled);
       setPreset(saved.preset);
 
@@ -107,6 +135,7 @@ export default function Equalizer({
     const flat = [...presets.flat];
 
     setValues(flat);
+    setCustomValues(flat);
     setEnabled(true);
     setPreset("flat");
 
@@ -118,29 +147,38 @@ export default function Equalizer({
   function saveCurrent(
     nextValues: number[],
     nextEnabled: boolean,
-    nextPreset: string
+    nextPreset: string,
+    nextCustomValues = customValues
   ) {
     if (!songId) return;
 
     saveSettings(songId, {
       values: nextValues,
+      customValues: nextCustomValues,
       enabled: nextEnabled,
       preset: nextPreset,
     });
   }
 
+  /*
+   * Changing a slider creates/updates the Custom EQ.
+   */
   function updateBand(index: number, value: number) {
     const nextValues = [...values];
-
     nextValues[index] = value;
 
+    const nextCustomValues = [...customValues];
+    nextCustomValues[index] = value;
+
     setValues(nextValues);
+    setCustomValues(nextCustomValues);
     setPreset("custom");
 
     saveCurrent(
       nextValues,
       enabled,
-      "custom"
+      "custom",
+      nextCustomValues
     );
 
     onBandChange?.(
@@ -153,21 +191,35 @@ export default function Equalizer({
     /*
      * CUSTOM
      *
-     * Keep the current EQ values instead of
-     * replacing them with a preset.
+     * Restore the saved Custom curve.
+     * Other presets never overwrite it.
      */
     if (name === "custom") {
+      const nextValues = [...customValues];
+
+      setValues(nextValues);
       setPreset("custom");
 
       saveCurrent(
-        values,
+        nextValues,
         enabled,
-        "custom"
+        "custom",
+        customValues
       );
+
+      nextValues.forEach((value, index) => {
+        onBandChange?.(
+          index,
+          enabled ? value : 0
+        );
+      });
 
       return;
     }
 
+    /*
+     * Existing presets work exactly as before.
+     */
     const next = presets[name];
 
     if (!next) return;
@@ -177,10 +229,15 @@ export default function Equalizer({
     setPreset(name);
     setValues(nextValues);
 
+    /*
+     * Notice:
+     * customValues is NOT changed here.
+     */
     saveCurrent(
       nextValues,
       enabled,
-      name
+      name,
+      customValues
     );
 
     nextValues.forEach((value, index) => {
@@ -197,10 +254,15 @@ export default function Equalizer({
     setPreset("flat");
     setValues(nextValues);
 
+    /*
+     * Reset behaves exactly as before.
+     * It does NOT destroy the saved Custom curve.
+     */
     saveCurrent(
       nextValues,
       enabled,
-      "flat"
+      "flat",
+      customValues
     );
 
     nextValues.forEach((value, index) => {
@@ -219,7 +281,8 @@ export default function Equalizer({
     saveCurrent(
       values,
       nextEnabled,
-      preset
+      preset,
+      customValues
     );
 
     values.forEach((value, index) => {
