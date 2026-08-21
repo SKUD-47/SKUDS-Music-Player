@@ -217,8 +217,11 @@ type LibraryContextValue = {
   importFiles: (files: FileList | File[]) => Promise<void>; openImport: () => void; openFolder: () => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>; folderInputRef: React.RefObject<HTMLInputElement | null>;
   playSong: (id: string, collection?: string[]) => void; togglePlay: () => void; next: () => void; previous: () => void;
-  seek: (value: number) => void; setVolume: (value: number) => void; setShuffle: (v: boolean) => void; cycleRepeat: () => void;
-  toggleFavorite: (id: string) => void; addQueue: (id: string) => void; removeQueue: (id: string) => void; clearQueue: () => void;
+seek: (value: number) => void;
+setVolume: (value: number) => void;
+setEqualizerBand: (index: number, value: number) => void;
+setShuffle: (v: boolean) => void;
+cycleRepeat: () => void;  toggleFavorite: (id: string) => void; addQueue: (id: string) => void; removeQueue: (id: string) => void; clearQueue: () => void;
   updateSong: (song: StoredSong) => Promise<void>; updatePlaylist: (playlist: StoredPlaylist) => Promise<void>; createPlaylist: (name: string, initialSongId?: string) => Promise<StoredPlaylist>;
   findArtwork: (song: StoredSong) => Promise<ArtworkCandidate[]>; findMissingArtwork: () => Promise<void>;
   removePlaylist: (id: string) => Promise<void>; removeSong: (id: string) => Promise<void>;
@@ -246,6 +249,7 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   const [visualizer, setVisualizer] = useState<AnalyserNode | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const equalizerFiltersRef = useRef<BiquadFilterNode[]>([]);
   const objectUrlRef = useRef('');
   const autoplayRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -264,16 +268,57 @@ function LibraryProvider({ children }: { children: ReactNode }) {
     audio.volume = volume;
     audioRef.current = audio;
     try {
-      const audioContext = new AudioContext();
-      const source = audioContext.createMediaElementSource(audio);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 64;
-      analyser.smoothingTimeConstant = .82;
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      audioContextRef.current = audioContext;
-      setVisualizer(analyser);
-    } catch {
+  const audioContext = new AudioContext();
+
+  const source =
+    audioContext.createMediaElementSource(audio);
+
+  const frequencies = [
+    60,
+    120,
+    250,
+    500,
+    1000,
+    2000,
+    4000,
+    8000,
+    12000,
+    16000,
+  ];
+
+  const filters = frequencies.map((frequency) => {
+    const filter = audioContext.createBiquadFilter();
+
+    filter.type = "peaking";
+    filter.frequency.value = frequency;
+    filter.Q.value = 1;
+    filter.gain.value = 0;
+
+    return filter;
+  });
+
+  equalizerFiltersRef.current = filters;
+
+  source.connect(filters[0]);
+
+  for (let i = 0; i < filters.length - 1; i++) {
+    filters[i].connect(filters[i + 1]);
+  }
+
+  const analyser =
+    audioContext.createAnalyser();
+
+  analyser.fftSize = 64;
+  analyser.smoothingTimeConstant = .82;
+
+  filters[filters.length - 1].connect(analyser);
+
+  analyser.connect(audioContext.destination);
+
+  audioContextRef.current = audioContext;
+
+  setVisualizer(analyser);
+} catch {
       // Playback remains fully functional in browsers without Web Audio support.
     }
    let animationFrame = 0;
@@ -468,6 +513,16 @@ if (repeat === 'one' && currentId) {
   togglePlayRef.current = togglePlay; previousRef.current = previous;
   const seek = useCallback((value: number) => { if (audioRef.current) { audioRef.current.currentTime = value; setProgress(value); } }, []);
   const setVolume = useCallback((value: number) => { setVolumeState(value); if (audioRef.current) audioRef.current.volume = value; void setSetting('volume', value); }, []);
+  const setEqualizerBand = useCallback(
+  (index: number, value: number) => {
+    const filter = equalizerFiltersRef.current[index];
+
+    if (!filter) return;
+
+    filter.gain.value = value;
+  },
+  [],
+);
   const setShuffle = useCallback((value: boolean) => setShuffleState(value), []);
   const cycleRepeat = useCallback(() => setRepeat((value) => value === 'off' ? 'all' : value === 'all' ? 'one' : 'off'), []);
 
@@ -669,7 +724,7 @@ const openFolder = async () => {
   void importFiles(result.files, result.playlistName);
 };
 
-  const value: LibraryContextValue = { songs, playlists, loading, storageError, currentId, isPlaying, progress, duration, volume, visualizer, shuffle, repeat, queue, showQueue, setShowQueue, importFiles, openImport, openFolder, fileInputRef, folderInputRef, playSong, togglePlay, next, previous, seek, setVolume, setShuffle, cycleRepeat, toggleFavorite, addQueue, removeQueue, clearQueue, updateSong, updatePlaylist, createPlaylist, findArtwork, findMissingArtwork, removePlaylist, removeSong, toasts, dismissToast: (id) => setToasts((items) => items.filter((item) => item.id !== id)), toast };
+  const value: LibraryContextValue = { songs, playlists, loading, storageError, currentId, isPlaying, progress, duration, volume, visualizer, shuffle, repeat, queue, showQueue, setShowQueue, importFiles, openImport, openFolder, fileInputRef, folderInputRef, playSong, togglePlay, next, previous, seek, setVolume, setEqualizerBand, setShuffle, cycleRepeat, toggleFavorite, addQueue, removeQueue, clearQueue, updateSong, updatePlaylist, createPlaylist, findArtwork, findMissingArtwork, removePlaylist, removeSong, toasts, dismissToast: (id) => setToasts((items) => items.filter((item) => item.id !== id)), toast };
   return <LibraryContext.Provider value={value}>{children}<audio aria-hidden="true" className="hidden"/><AppToasts toasts={toasts} dismiss={value.dismissToast}/></LibraryContext.Provider>;
 }
 
