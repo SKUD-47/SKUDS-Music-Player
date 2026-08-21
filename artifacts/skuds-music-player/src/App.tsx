@@ -298,6 +298,28 @@ function LibraryProvider({ children }: { children: ReactNode }) {
   });
 
   equalizerFiltersRef.current = filters;
+      // Re-apply the current EQ settings after the filter chain is created.
+const savedEQ = localStorage.getItem("skuds-equalizer-settings");
+
+if (savedEQ && currentId) {
+  try {
+    const allEQ = JSON.parse(savedEQ);
+    const songEQ = allEQ[currentId];
+
+    if (songEQ?.values) {
+      songEQ.values.forEach(
+        (value: number, index: number) => {
+          if (filters[index]) {
+            filters[index].gain.value =
+              songEQ.enabled ? value : 0;
+          }
+        }
+      );
+    }
+  } catch {
+    // Ignore invalid saved EQ data.
+  }
+}
 
   source.connect(filters[0]);
 
