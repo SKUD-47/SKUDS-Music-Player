@@ -72,45 +72,21 @@ export default function Equalizer({
   onBandChange,
 }: EqualizerProps) {
   const [enabled, setEnabled] = useState(true);
+
   const [values, setValues] = useState<number[]>([
     ...presets.flat,
   ]);
+
   const [preset, setPreset] = useState("flat");
 
   /*
-   * Load the EQ settings whenever the song changes.
+   * Load this song's EQ settings whenever the song changes.
    */
-useEffect(() => {
-  const saved = getSavedSettings(songId);
+  useEffect(() => {
+    const saved = getSavedSettings(songId);
 
-  if (saved) {
-    setValues(saved.values);
-    setEnabled(saved.enabled);
-    setPreset(saved.preset);
-
-    saved.values.forEach((value, index) => {
-      onBandChange?.(
-        index,
-        saved.enabled ? value : 0
-      );
-    });
-
-    return;
-  }
-
-  const flat = [...presets.flat];
-
-  setValues(flat);
-  setEnabled(true);
-  setPreset("flat");
-
-  flat.forEach((value, index) => {
-    onBandChange?.(index, value);
-  });
-}, [songId, onBandChange]);
-function saveCurrent(
     if (saved) {
-      setValues(saved.values);
+      setValues([...saved.values]);
       setEnabled(saved.enabled);
       setPreset(saved.preset);
 
@@ -124,15 +100,17 @@ function saveCurrent(
       return;
     }
 
-    // No saved settings = start flat
-    setValues([...presets.flat]);
+    // No saved settings for this song = Flat
+    const flat = [...presets.flat];
+
+    setValues(flat);
     setEnabled(true);
     setPreset("flat");
 
-    presets.flat.forEach((value, index) => {
+    flat.forEach((value, index) => {
       onBandChange?.(index, value);
     });
-  }, [songId]);
+  }, [songId, onBandChange]);
 
   function saveCurrent(
     nextValues: number[],
@@ -150,10 +128,11 @@ function saveCurrent(
 
   function updateBand(index: number, value: number) {
     const nextValues = [...values];
+
     nextValues[index] = value;
 
-    setPreset("custom");
     setValues(nextValues);
+    setPreset("custom");
 
     saveCurrent(
       nextValues,
@@ -174,8 +153,8 @@ function saveCurrent(
 
     const nextValues = [...next];
 
-    setPreset(name);
     setValues(nextValues);
+    setPreset(name);
 
     saveCurrent(
       nextValues,
@@ -194,8 +173,8 @@ function saveCurrent(
   function reset() {
     const nextValues = [...presets.flat];
 
-    setPreset("flat");
     setValues(nextValues);
+    setPreset("flat");
 
     saveCurrent(
       nextValues,
@@ -234,7 +213,10 @@ function saveCurrent(
     <div className="eq-panel">
       <div className="eq-header">
         <div>
-          <div className="eq-title">Equalizer</div>
+          <div className="eq-title">
+            Equalizer
+          </div>
+
           <div className="eq-subtitle">
             10 BAND
           </div>
@@ -313,19 +295,35 @@ function saveCurrent(
           }
           aria-label="Equalizer preset"
         >
-          <option value="flat">Flat</option>
-          <option value="bass">Bass Boost</option>
+          <option value="flat">
+            Flat
+          </option>
+
+          <option value="bass">
+            Bass Boost
+          </option>
+
           <option value="treble">
             Treble Boost
           </option>
-          <option value="vocal">Vocal</option>
-          <option value="rock">Rock</option>
+
+          <option value="vocal">
+            Vocal
+          </option>
+
+          <option value="rock">
+            Rock
+          </option>
+
           <option value="electronic">
             Electronic
           </option>
         </select>
 
-        <button type="button" onClick={reset}>
+        <button
+          type="button"
+          onClick={reset}
+        >
           Reset
         </button>
       </div>
