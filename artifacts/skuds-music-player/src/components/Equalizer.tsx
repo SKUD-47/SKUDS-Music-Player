@@ -80,7 +80,7 @@ export default function Equalizer({
   /*
    * Load the EQ settings whenever the song changes.
    */
- useEffect(() => {
+useEffect(() => {
   const saved = getSavedSettings(songId);
 
   if (saved) {
@@ -104,11 +104,10 @@ export default function Equalizer({
   setEnabled(true);
   setPreset("flat");
 
-   flat.forEach((value, index) => {
+  flat.forEach((value, index) => {
     onBandChange?.(index, value);
   });
 }, [songId, onBandChange]);
-
 function saveCurrent(
     if (saved) {
       setValues(saved.values);
