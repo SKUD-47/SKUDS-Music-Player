@@ -19,6 +19,7 @@ import {
   type ArtworkCandidate, type ArtworkImageInfo,
 } from '@/lib/artwork';
 
+import { Equalizer }from "./components/Equalizer";
 import { LyricsFeature } from '../LyricsFeature';
 import { autoFindArtwork } from '@/lib/artwork-auto';
 import { openFolderPlaylistImporter } from './folderPlaylistImporter';
@@ -810,7 +811,24 @@ function ExpandedPlayer({ onClose }: { onClose: () => void }) {
   const library = useLibraryContext();
   const current = library.songs.find((song) => song.id === library.currentId);
   if (!current) return null;
-return <div className="dialog-backdrop fixed inset-0 z-[55] flex items-center justify-center p-4"><div className="relative w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl sm:p-10"><IconButton label="Close expanded player" onClick={onClose} className="absolute right-4 top-4"><X size={18}/></IconButton><div className="mx-auto max-w-[330px]"><Artwork song={current} size="hero"/></div><div className="mt-7 text-center"><div className="font-display text-2xl font-semibold">{current.title}</div><div className="mt-1 text-sm text-muted-foreground">{current.artist} · {current.album}</div></div><div className="mt-8 flex items-center gap-2"><span className="font-mono text-[10px] text-muted-foreground">{formatTime(library.progress)}</span><input aria-label="Expanded seek" type="range" className="progress-track min-w-0 flex-1" min="0" max={library.duration || current.duration || 1} value={library.progress} onChange={(event) => library.seek(Number(event.target.value))}/><span className="font-mono text-[10px] text-muted-foreground">{formatTime(library.duration || current.duration)}</span></div><div className="mt-7 flex items-center justify-center gap-5"><IconButton label="Shuffle" onClick={() => library.setShuffle(!library.shuffle)} active={library.shuffle}><Shuffle size={18}/></IconButton><IconButton label="Previous track" onClick={library.previous}><SkipBack size={20}/></IconButton><button type="button" onClick={library.togglePlay} aria-label="Play or pause" className="green-glow flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">{library.isPlaying ? <Pause size={23} fill="currentColor"/> : <Play size={23} fill="currentColor"/>}</button><IconButton label="Next track" onClick={library.next}><SkipForward size={20}/></IconButton><IconButton label="Repeat" onClick={library.cycleRepeat} active={library.repeat !== 'off'}>{library.repeat === 'one' ? <Repeat1 size={18}/> : <Repeat size={18}/>}</IconButton></div><div className="mt-1 flex justify-center"><LyricsFeature song={current} currentTime={library.progress} onSeek={library.seek}/></div><div className="mx-auto mt-3 flex max-w-[180px] items-center gap-2"><VolumeX size={14} className="text-muted-foreground"/><input aria-label="Volume" type="range" className="volume-track min-w-0 flex-1" min="0" max="1" step=".01" value={library.volume} onChange={(event) => library.setVolume(Number(event.target.value))}/><Volume2 size={14} className="text-muted-foreground"/></div></div></div>;  const details = [
+return <div className="dialog-backdrop fixed inset-0 z-[55] flex items-center justify-center p-4"><div className="relative w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl sm:p-10"><IconButton label="Close expanded player" onClick={onClose} className="absolute right-4 top-4"><X size={18}/></IconButton><div className="mx-auto max-w-[330px]"><Artwork song={current} size="hero"/></div><div className="mt-7 text-center"><div className="font-display text-2xl font-semibold">{current.title}</div><div className="mt-1 text-sm text-muted-foreground">{current.artist} · {current.album}</div></div><div className="mt-8 flex items-center gap-2"><span className="font-mono text-[10px] text-muted-foreground">{formatTime(library.progress)}</span><input aria-label="Expanded seek" type="range" className="progress-track min-w-0 flex-1" min="0" max={library.duration || current.duration || 1} value={library.progress} onChange={(event) => library.seek(Number(event.target.value))}/><span className="font-mono text-[10px] text-muted-foreground">{formatTime(library.duration || current.duration)}</span></div><div className="mt-7 flex items-center justify-center gap-5"><IconButton label="Shuffle" onClick={() => library.setShuffle(!library.shuffle)} active={library.shuffle}><Shuffle size={18}/></IconButton><IconButton label="Previous track" onClick={library.previous}><SkipBack size={20}/></IconButton><button type="button" onClick={library.togglePlay} aria-label="Play or pause" className="green-glow flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">{library.isPlaying ? <Pause size={23} fill="currentColor"/> : <Play size={23} fill="currentColor"/>}</button><IconButton label="Next track" onClick={library.next}><SkipForward size={20}/></IconButton><IconButton label="Repeat" onClick={library.cycleRepeat} active={library.repeat !== 'off'}>{library.repeat === 'one' ? <Repeat1 size={18}/> : <Repeat size={18}/>}</IconButton></div><div className="mt-1 flex justify-center"><LyricsFeature song={current} currentTime={library.progress} onSeek={library.seek}/></div><div className="mx-auto mt-3 flex max-w-[180px] items-center gap-2">
+  <VolumeX size={14} className="text-muted-foreground"/>
+  <input
+    aria-label="Volume"
+    type="range"
+    className="volume-track min-w-0 flex-1"
+    min="0"
+    max="1"
+    step=".01"
+    value={library.volume}
+    onChange={(event) => library.setVolume(Number(event.target.value))}
+  />
+  <Volume2 size={14} className="text-muted-foreground"/>
+</div>
+
+<div className="mt-6">
+  <Equalizer />
+</div><VolumeX size={14} className="text-muted-foreground"/><input aria-label="Volume" type="range" className="volume-track min-w-0 flex-1" min="0" max="1" step=".01" value={library.volume} onChange={(event) => library.setVolume(Number(event.target.value))}/><Volume2 size={14} className="text-muted-foreground"/></div></div></div>;  const details = [
     ['Title', song.title, Music2],
     ['Artist', song.artist, UserRound],
     ['Album', song.album, Disc3],
