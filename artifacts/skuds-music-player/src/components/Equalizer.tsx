@@ -1,3 +1,7 @@
+/* =========================
+   SKUDS Equalizer
+   ========================= */
+
 import { useEffect, useState } from "react";
 
 const bands = [
@@ -146,6 +150,24 @@ export default function Equalizer({
   }
 
   function changePreset(name: string) {
+    /*
+     * CUSTOM
+     *
+     * Keep the current EQ values instead of
+     * replacing them with a preset.
+     */
+    if (name === "custom") {
+      setPreset("custom");
+
+      saveCurrent(
+        values,
+        enabled,
+        "custom"
+      );
+
+      return;
+    }
+
     const next = presets[name];
 
     if (!next) return;
@@ -294,7 +316,9 @@ export default function Equalizer({
           }
           aria-label="Equalizer preset"
         >
-          <option value="flat">Flat</option>
+          <option value="flat">
+            Flat
+          </option>
 
           <option value="bass">
             Bass Boost
@@ -314,6 +338,10 @@ export default function Equalizer({
 
           <option value="electronic">
             Electronic
+          </option>
+
+          <option value="custom">
+            Custom
           </option>
         </select>
 
