@@ -80,7 +80,7 @@ export default function Equalizer({
   const [preset, setPreset] = useState("flat");
 
   /*
-   * Load this song's EQ settings whenever the song changes.
+   * Load the EQ settings whenever the song changes.
    */
   useEffect(() => {
     const saved = getSavedSettings(songId);
@@ -100,7 +100,6 @@ export default function Equalizer({
       return;
     }
 
-    // No saved settings for this song = Flat
     const flat = [...presets.flat];
 
     setValues(flat);
@@ -153,8 +152,8 @@ export default function Equalizer({
 
     const nextValues = [...next];
 
-    setValues(nextValues);
     setPreset(name);
+    setValues(nextValues);
 
     saveCurrent(
       nextValues,
@@ -173,8 +172,8 @@ export default function Equalizer({
   function reset() {
     const nextValues = [...presets.flat];
 
-    setValues(nextValues);
     setPreset("flat");
+    setValues(nextValues);
 
     saveCurrent(
       nextValues,
@@ -295,9 +294,7 @@ export default function Equalizer({
           }
           aria-label="Equalizer preset"
         >
-          <option value="flat">
-            Flat
-          </option>
+          <option value="flat">Flat</option>
 
           <option value="bass">
             Bass Boost
