@@ -104,11 +104,12 @@ export default function Equalizer({
   setEnabled(true);
   setPreset("flat");
 
-  flat.forEach((value, index) => {
+   flat.forEach((value, index) => {
     onBandChange?.(index, value);
   });
 }, [songId, onBandChange]);
 
+function saveCurrent(
     if (saved) {
       setValues(saved.values);
       setEnabled(saved.enabled);
