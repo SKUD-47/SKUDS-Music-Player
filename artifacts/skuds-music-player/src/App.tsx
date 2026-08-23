@@ -1284,7 +1284,43 @@ onEdit={() => setEditSong(song)}
     });
   }}
 />}
-</div></div></div>)}</div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>{artworkOpen && <ArtworkUploadDialog title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'} initialArtwork={playlist.artwork} onClose={() => setArtworkOpen(false)} onSave={async (artwork) => { await library.updatePlaylist({ ...playlist, artwork, updatedAt: Date.now() }); }}/>}</>;
+</div></div></div>)}</div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>
+
+{artworkOpen && <ArtworkUploadDialog
+  title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'}
+  initialArtwork={playlist.artwork}
+  onClose={() => setArtworkOpen(false)}
+  onSave={async (artwork) => {
+    await library.updatePlaylist({
+      ...playlist,
+      artwork,
+      updatedAt: Date.now()
+    });
+  }}
+/>}
+
+{playlistSong && (
+  <AddToPlaylistDialog
+    song={playlistSong}
+    onClose={() => setPlaylistSong(null)}
+  />
+)}
+
+{infoSong && (
+  <MetadataDialog
+    song={infoSong}
+    onClose={() => setInfoSong(null)}
+  />
+)}
+
+{editSong && (
+  <EditSongDialog
+    song={editSong}
+    onClose={() => setEditSong(null)}
+  />
+)}
+
+</>;
 }
 
 function PlaylistArtwork({ playlist, className }: { playlist: StoredPlaylist; className: string }) {
