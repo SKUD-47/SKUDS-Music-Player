@@ -1288,7 +1288,7 @@ onEdit={() => {
   }}
 />}
 </div>
-))}
+)}
 {artworkOpen && (
 
   <ArtworkUploadDialog
