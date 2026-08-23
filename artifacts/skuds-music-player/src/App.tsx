@@ -1326,7 +1326,7 @@ onEdit={() => {
     onClose={() => setEditSong(null)}
   />
 )}
-</div>
+</div>}
 );
 }
 
