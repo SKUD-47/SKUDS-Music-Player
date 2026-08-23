@@ -1288,6 +1288,7 @@ onEdit={() => {
   }}
 />}
 </div>
+
 {artworkOpen && (
   <ArtworkUploadDialog
     title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'}
@@ -1324,8 +1325,10 @@ onEdit={() => {
   />
 )}
 </div>
-</>;
+);
 }
+
+
 
 
 function PlaylistArtwork({ playlist, className }: { playlist: StoredPlaylist; className: string }) {
