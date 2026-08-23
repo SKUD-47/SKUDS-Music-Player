@@ -1269,7 +1269,6 @@ const [editSong, setEditSong] = useState<StoredSong | null>(null);
   song={song}
   onClose={() => setMenuId(null)}
   onAddPlaylist={() => {
-  onAddPlaylist={() => {
   setPlaylistSong(song);
 }}
 onInfo={() => {
