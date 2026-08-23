@@ -1259,6 +1259,9 @@ function PlaylistCard({ playlist, index, onOpen, onDelete }: { playlist: StoredP
 function PlaylistDetail({ playlist, songs, onBack, onRename, onDelete }: { playlist: StoredPlaylist; songs: StoredSong[]; onBack: () => void; onRename: () => void; onDelete: () => void }) {
   const library = useLibraryContext();
   const [menuId, setMenuId] = useState<string | null>(null);
+  const [playlistSong, setPlaylistSong] = useState<StoredSong | null>(null);
+const [infoSong, setInfoSong] = useState<StoredSong | null>(null);
+const [editSong, setEditSong] = useState<StoredSong | null>(null);
   const [artworkOpen, setArtworkOpen] = useState(false);
   const move = async (index: number, direction: -1 | 1) => { const nextIndex = index + direction; if (nextIndex < 0 || nextIndex >= songs.length) return; const ids = [...playlist.songIds]; const [item] = ids.splice(index, 1); ids.splice(nextIndex, 0, item); await library.updatePlaylist({ ...playlist, songIds: ids, updatedAt: Date.now() }); };
   return <><div><button type="button" onClick={onBack} className="button-ghost mb-6 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"><ArrowLeft size={16}/> Back to playlists</button><div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-[#13231a] p-6 sm:flex-row sm:items-end sm:p-8"><PlaylistArtwork playlist={playlist} className="h-28 w-28 shrink-0 rounded-2xl"/><div className="min-w-0 flex-1"><div className="text-xs font-bold uppercase tracking-[.18em] text-primary">Playlist</div><h2 className="mt-2 truncate font-display text-3xl font-semibold">{playlist.name}</h2><p className="mt-2 text-sm text-muted-foreground">{songs.length} {songs.length === 1 ? 'track' : 'tracks'} in this shelf</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => songs[0] && library.playSong(songs[0].id, songs.map((song) => song.id))} disabled={!songs.length} className="button-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play all</button><button type="button" onClick={() => { if (!songs[0]) return; library.setShuffle(true); library.playSong(songs[0].id, songs.map((song) => song.id)); }} disabled={!songs.length} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold"><Shuffle size={16}/> Shuffle</button><button type="button" onClick={() => setArtworkOpen(true)} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold"><Upload size={15}/> {playlist.artwork ? 'Change artwork' : 'Change playlist artwork'}</button><IconButton label="Rename playlist" onClick={onRename}><Pencil size={16}/></IconButton><IconButton label="Delete playlist" onClick={onDelete}><Trash2 size={16}/></IconButton></div></div>{songs.length ? <div className="mt-6 overflow-visible rounded-2xl border border-border bg-card/70">{songs.map((song, index) => <div key={song.id} className={`list-row relative flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 ${menuId === song.id ? 'z-30' : 'z-0'}`}>
@@ -1266,14 +1269,16 @@ function PlaylistDetail({ playlist, songs, onBack, onRename, onDelete }: { playl
   song={song}
   onClose={() => setMenuId(null)}
   onAddPlaylist={() => {
-    // We'll connect this in the next step.
-  }}
-  onInfo={() => {
-    // We'll connect this in the next step.
-  }}
-  onEdit={() => {
-    // We'll connect this in the next step.
-  }}
+  onAddPlaylist={() => {
+  setPlaylistSong(song);
+}}
+onInfo={() => {
+  setInfoSong(song);
+}}
+onEdit={() => {
+  setEditSong(song);
+}}
+
   removeLabel="Remove from playlist"
   onRemove={() => {
     void library.updatePlaylist({
@@ -1283,8 +1288,42 @@ function PlaylistDetail({ playlist, songs, onBack, onRename, onDelete }: { playl
     });
   }}
 />}
-</div></div></div>)}</div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>{artworkOpen && <ArtworkUploadDialog title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'} initialArtwork={playlist.artwork} onClose={() => setArtworkOpen(false)} onSave={async (artwork) => { await library.updatePlaylist({ ...playlist, artwork, updatedAt: Date.now() }); }}/>}</>;
+</div>
+{artworkOpen && (
+  <ArtworkUploadDialog
+    title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'}
+    initialArtwork={playlist.artwork}
+    onClose={() => setArtworkOpen(false)}
+    onSave={async (artwork) => {
+      await library.updatePlaylist({
+        ...playlist,
+        artwork,
+        updatedAt: Date.now(),
+      });
+    }}
+  />
+)}
+{playlistSong && (
+  <AddToPlaylistDialog
+    song={playlistSong}
+    onClose={() => setPlaylistSong(null)}
+  />
+)}
+{infoSong && (
+  <MetadataDialog
+    song={infoSong}
+    onClose={() => setInfoSong(null)}
+  />
+)}
+{editSong && (
+  <EditSongDialog
+    song={editSong}
+    onClose={() => setEditSong(null)}
+  />
+)}
+</>;
 }
+
 
 function PlaylistArtwork({ playlist, className }: { playlist: StoredPlaylist; className: string }) {
   const artworkUrl = useObjectUrl(playlist.artwork);
