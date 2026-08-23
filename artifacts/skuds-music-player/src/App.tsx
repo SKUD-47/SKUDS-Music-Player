@@ -1288,8 +1288,9 @@ onEdit={() => {
   }}
 />}
 </div>
-
+))}
 {artworkOpen && (
+
   <ArtworkUploadDialog
     title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'}
     initialArtwork={playlist.artwork}
