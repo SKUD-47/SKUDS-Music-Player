@@ -1195,26 +1195,11 @@ function TrackMenu({
   removeLabel?: string;
 }) {
   const library = useLibraryContext();
-return <div ref={menuRef} data-track-menu onPointerDown={(event) => event.stopPropagation()}
-
- onClick={(event) => event.stopPropagation()} className="absolute right-0 top-10 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl"><button type="button" onClick={() => { library.playSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Play size={14}/> Play now</button><button type="button" onClick={() => { library.addQueue(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><ListMusic size={14}/> Add to queue</button><button type="button" onClick={() => { onAddPlaylist(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Plus size={14}/> Add to playlist</button><button type="button" onClick={() => { onInfo(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Info size={14}/> Song info</button><button type="button" onClick={() => { onEdit(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Pencil size={14}/> Edit song</button><button type="button" onClick={() => { if (onRemove) { onRemove(); } else { void library.removeSong(song.id); } onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"><Trash2 size={14}/> {removeLabel}</button></div>;
+return <div data-track-menu onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} className="absolute right-0 top-10 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl"><button type="button" onClick={() => { library.playSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Play size={14}/> Play now</button><button type="button" onClick={() => { library.addQueue(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><ListMusic size={14}/> Add to queue</button><button type="button" onClick={() => { onAddPlaylist(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Plus size={14}/> Add to playlist</button><button type="button" onClick={() => { onInfo(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Info size={14}/> Song info</button><button type="button" onClick={() => { onEdit(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Pencil size={14}/> Edit song</button><button type="button" onClick={() => { if (onRemove) { onRemove(); } else { void library.removeSong(song.id); } onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"><Trash2 size={14}/> {removeLabel}</button></div>;
 }
 
 function FavoritesPage() {
   const library = useLibraryContext();
-  const menuRef = useRef<HTMLDivElement>(null);
-
-useEffect(() => {
-  const menu = menuRef.current;
-  if (!menu) return;
-
-  requestAnimationFrame(() => {
-    menu.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-    });
-  });
-}, []);
   const favoriteSongs = library.songs.filter((song) => song.favorite);
   return <Shell title="Favorites" eyebrow="The ones worth keeping close" onImport={library.openImport}><div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-[#14261c] p-7 sm:p-9"><Heart size={100} className="absolute -right-3 -top-4 text-primary/10" fill="currentColor"/><div className="relative"><div className="text-xs font-bold uppercase tracking-[.2em] text-primary">Your keepers</div><h2 className="mt-3 max-w-lg font-display text-3xl font-semibold tracking-[-.04em] sm:text-4xl">The tracks you return to.</h2><p className="mt-3 text-sm text-muted-foreground">{favoriteSongs.length ? `${favoriteSongs.length} ${favoriteSongs.length === 1 ? 'track' : 'tracks'} marked for the next listen.` : 'Tap the heart on any track to make it part of this shelf.'}</p>{favoriteSongs.length > 0 && <button type="button" onClick={() => library.playSong(favoriteSongs[0].id, favoriteSongs.map((song) => song.id))} className="button-primary mt-6 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play favorites</button>}</div></div>{favoriteSongs.length ? <TrackList songs={favoriteSongs}/> : <div className="mt-6"><EmptyState title="No favorites yet" description="When a track feels right, save it with the heart button and it will appear here." icon={Heart}/></div>}<Footer/></Shell>;
 }
