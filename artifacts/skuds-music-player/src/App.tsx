@@ -1302,24 +1302,28 @@ onEdit={() => {
     }}
   />
 )}
+
 {playlistSong && (
   <AddToPlaylistDialog
     song={playlistSong}
     onClose={() => setPlaylistSong(null)}
   />
 )}
+
 {infoSong && (
   <MetadataDialog
     song={infoSong}
     onClose={() => setInfoSong(null)}
   />
 )}
+
 {editSong && (
   <EditSongDialog
     song={editSong}
     onClose={() => setEditSong(null)}
   />
 )}
+</div>
 </>;
 }
 
