@@ -1154,27 +1154,196 @@ function SongsPage() {
   return <Shell title="All songs" eyebrow={`${library.songs.length} ${library.songs.length === 1 ? 'track' : 'tracks'} in your room`} onImport={library.openImport}><input ref={library.fileInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/><input ref={library.folderInputRef} type="file" accept={ACCEPTED.join(',')} multiple hidden onChange={(event) => { if (event.target.files) void library.importFiles(event.target.files); event.target.value = ''; }}/><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="max-w-xl text-sm leading-6 text-muted-foreground">Every track you import lives here, searchable by title, artist, or album.</p></div><div className="relative sm:w-[290px]"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"/><input id="song-search" data-testid="input-song-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search your library" className="h-11 w-full rounded-xl border border-border bg-card pl-10 pr-16 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-primary/60"/><kbd className="absolute right-3 top-1/2 -translate-y-1/2">{findSongShortcut}</kbd></div></div><div onDragEnter={(event) => { event.preventDefault(); setDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDragging(false); }} onDrop={(event) => { event.preventDefault(); setDragging(false); void library.importFiles(event.dataTransfer.files); }} className={`mt-7 rounded-2xl border border-dashed p-3 transition-colors ${dragging ? 'border-primary bg-primary/10' : 'border-border/80'}`}><div className="flex items-center justify-between px-2 py-1 text-xs text-muted-foreground"><span className="flex items-center gap-2"><Download size={14} className={dragging ? 'text-primary' : ''}/>{dragging ? 'Release to import your files' : 'Drop audio files anywhere in this area to import'}</span><button type="button" onClick={library.openFolder} className="button-ghost hidden items-center gap-1 rounded-lg px-2 py-1 sm:flex"><FolderOpen size={14}/> Choose folder</button></div></div>{library.loading ? <SkeletonList/> : filtered.length ? <TrackList songs={filtered} onAddPlaylist={setPlaylistSong}/> : library.songs.length ? <div className="mt-6"><EmptyState title="No matches found" description="Try a different title, artist, or album name." icon={Search}/></div> : <div className="mt-6"><EmptyState title="Your library is empty" description="Import music from your computer or USB drive to get started." onImport={library.openImport} icon={FileAudio}/></div>}<Footer/>{playlistSong && <AddToPlaylistDialog song={playlistSong} onClose={() => setPlaylistSong(null)}/>}</Shell>;
 }
 
-function TrackList({ songs, compact = false, onAddPlaylist }: { songs: StoredSong[]; compact?: boolean; onAddPlaylist?: (song: StoredSong) => void }) {
+function TrackList({
+  songs,
+  compact = false,
+  onAddPlaylist,
+}: {
+  songs: StoredSong[];
+  compact?: boolean;
+  onAddPlaylist?: (song: StoredSong) => void;
+}) {
   const library = useLibraryContext();
   const [localMenuId, setLocalMenuId] = useState<string | null>(null);
-  const [localPlaylistSong, setLocalPlaylistSong] = useState<StoredSong | null>(null);
+  const [localPlaylistSong, setLocalPlaylistSong] =
+    useState<StoredSong | null>(null);
   const [infoSong, setInfoSong] = useState<StoredSong | null>(null);
   const [editSong, setEditSong] = useState<StoredSong | null>(null);
+
   const activeMenuId = localMenuId;
   const updateMenu = setLocalMenuId;
   const openPlaylistDialog = onAddPlaylist ?? setLocalPlaylistSong;
+
   useEffect(() => {
     if (!activeMenuId) return;
+
     const closeOutside = (event: PointerEvent) => {
       const target = event.target as HTMLElement;
-      if (!target.closest('[data-track-menu]')) updateMenu(null);
+
+      if (!target.closest("[data-track-menu]")) {
+        updateMenu(null);
+      }
     };
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') updateMenu(null); };
-    document.addEventListener('pointerdown', closeOutside);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => { document.removeEventListener('pointerdown', closeOutside); document.removeEventListener('keydown', closeOnEscape); };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        updateMenu(null);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOutside);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOutside);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
   }, [activeMenuId, updateMenu]);
-  return <><div className={`mt-5 overflow-visible rounded-2xl border border-border bg-card/70 ${compact ? '' : ''}`}><div className="hidden grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] gap-3 border-b border-border px-4 py-3 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground sm:grid"><span>#</span><span>Track</span><span>Artist</span><span>Album</span><span>Time</span><span/></div>{songs.map((song, index) => <div key={song.id} className={`list-row group relative grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2.5 last:border-0 sm:grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] sm:gap-3 sm:px-4 ${activeMenuId === song.id ? 'z-30' : 'z-0'}`}><span className="text-center font-mono text-xs text-muted-foreground">{index + 1}</span><button type="button" data-testid={`button-play-song-${song.id}`} onClick={() => library.playSong(song.id, songs.map((item) => item.id))} className="flex min-w-0 items-center gap-3 text-left"><Artwork song={song} size="sm"/><span className="min-w-0"><span className={`block truncate text-sm font-semibold ${library.currentId === song.id && library.isPlaying ? 'text-primary' : 'text-foreground'}`}>{song.title}</span><span className="mt-0.5 block truncate text-xs text-muted-foreground sm:hidden">{song.artist}</span></span></button><div className="hidden truncate text-sm text-muted-foreground sm:block">{song.artist}</div><div className="hidden truncate text-sm text-muted-foreground sm:block">{song.album}</div><span className="hidden font-mono text-xs text-muted-foreground sm:block">{formatTime(song.duration)}</span><div className="flex items-center justify-end gap-0.5"><IconButton label={song.favorite ? `Unfavorite ${song.title}` : `Favorite ${song.title}`} onClick={() => library.toggleFavorite(song.id)} active={song.favorite} className={song.favorite ? 'text-primary' : 'opacity-50 group-hover:opacity-100'}><Heart size={16} fill={song.favorite ? 'currentColor' : 'none'}/></IconButton><div data-track-menu className="relative"><IconButton label={`Options for ${song.title}`} onClick={() => updateMenu(activeMenuId === song.id ? null : song.id)}><MoreHorizontal size={17}/></IconButton>{activeMenuId === song.id && <TrackMenu song={song} onClose={() => updateMenu(null)} onAddPlaylist={() => openPlaylistDialog(song)} onInfo={() => setInfoSong(song)} onEdit={() => setEditSong(song)}/>}</div></div></div>)}</div>{localPlaylistSong && <AddToPlaylistDialog song={localPlaylistSong} onClose={() => setLocalPlaylistSong(null)}/>} {infoSong && <MetadataDialog song={infoSong} onClose={() => setInfoSong(null)}/>} {editSong && <EditSongDialog song={editSong} onClose={() => setEditSong(null)}/>}</>;
+
+  return (
+    <>
+      <div
+        className={`mt-5 overflow-visible rounded-2xl border border-border bg-card/70 ${
+          compact ? "" : ""
+        }`}
+      >
+        <div className="hidden grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] gap-3 border-b border-border px-4 py-3 text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground sm:grid">
+          <span>#</span>
+          <span>Track</span>
+          <span>Artist</span>
+          <span>Album</span>
+          <span>Time</span>
+          <span />
+        </div>
+
+        {songs.map((song, index) => (
+          <div
+            key={song.id}
+            className={`list-row group relative grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2.5 last:border-0 sm:grid-cols-[42px_minmax(220px,1.5fr)_minmax(120px,1fr)_minmax(120px,1fr)_72px_84px] sm:gap-3 sm:px-4 ${
+              activeMenuId === song.id ? "z-30" : "z-0"
+            }`}
+          >
+            <span className="text-center font-mono text-xs text-muted-foreground">
+              {index + 1}
+            </span>
+
+            <button
+              type="button"
+              data-testid={`button-play-song-${song.id}`}
+              onClick={() =>
+                library.playSong(
+                  song.id,
+                  songs.map((item) => item.id)
+                )
+              }
+              className="flex min-w-0 items-center gap-3 text-left"
+            >
+              <Artwork song={song} size="sm" />
+
+              <span className="min-w-0">
+                <span
+                  className={`block truncate text-sm font-semibold ${
+                    library.currentId === song.id && library.isPlaying
+                      ? "text-primary"
+                      : "text-foreground"
+                  }`}
+                >
+                  {song.title}
+                </span>
+
+                <span className="mt-0.5 block truncate text-xs text-muted-foreground sm:hidden">
+                  {song.artist}
+                </span>
+              </span>
+            </button>
+
+            <div className="hidden truncate text-sm text-muted-foreground sm:block">
+              {song.artist}
+            </div>
+
+            <div className="hidden truncate text-sm text-muted-foreground sm:block">
+              {song.album}
+            </div>
+
+            <span className="hidden font-mono text-xs text-muted-foreground sm:block">
+              {formatTime(song.duration)}
+            </span>
+
+            <div className="flex items-center justify-end gap-0.5">
+              <IconButton
+                label={
+                  song.favorite
+                    ? `Unfavorite ${song.title}`
+                    : `Favorite ${song.title}`
+                }
+                onClick={() => library.toggleFavorite(song.id)}
+                active={song.favorite}
+                className={
+                  song.favorite
+                    ? "text-primary"
+                    : "opacity-50 group-hover:opacity-100"
+                }
+              >
+                <Heart
+                  size={16}
+                  fill={song.favorite ? "currentColor" : "none"}
+                />
+              </IconButton>
+
+              {/* Track menu anchor */}
+              <div
+                data-track-menu-anchor={song.id}
+                data-track-menu
+                className="relative z-50 pointer-events-auto"
+              >
+                <IconButton
+                  label={`Options for ${song.title}`}
+                  onClick={() =>
+                    updateMenu(
+                      activeMenuId === song.id ? null : song.id
+                    )
+                  }
+                >
+                  <MoreHorizontal size={17} />
+                </IconButton>
+
+                {activeMenuId === song.id && (
+                  <TrackMenu
+                    song={song}
+                    onClose={() => updateMenu(null)}
+                    onAddPlaylist={() => openPlaylistDialog(song)}
+                    onInfo={() => setInfoSong(song)}
+                    onEdit={() => setEditSong(song)}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {localPlaylistSong && (
+        <AddToPlaylistDialog
+          song={localPlaylistSong}
+          onClose={() => setLocalPlaylistSong(null)}
+        />
+      )}
+
+      {infoSong && (
+        <MetadataDialog
+          song={infoSong}
+          onClose={() => setInfoSong(null)}
+        />
+      )}
+
+      {editSong && (
+        <EditSongDialog
+          song={editSong}
+          onClose={() => setEditSong(null)}
+        />
+      )}
+    </>
+  );
 }
 
 function TrackMenu({
