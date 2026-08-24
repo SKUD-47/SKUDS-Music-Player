@@ -1355,7 +1355,6 @@ function AddToPlaylistDialog({ song, onClose }: { song: StoredSong; onClose: () 
   const library = useLibraryContext();
   const menuRef = useRef<HTMLDivElement>(null);
 const [openUp, setOpenUp] = useState(false);
-  const library = useLibraryContext();
 
 useEffect(() => {
   const anchor = document.querySelector(
