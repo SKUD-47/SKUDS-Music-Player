@@ -1642,7 +1642,19 @@ onEdit={() => setEditSong(song)}
     });
   }}
 />}
-</div></div></div>)}</div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>
+</div></div></div>)} <div
+  onDragOver={(event) => {
+    event.preventDefault();
+    setDragOverIndex(songs.length);
+  }}
+  onDragLeave={() => setDragOverIndex(null)}
+  className={`h-2 transition-all ${
+    dragOverIndex === songs.length
+      ? 'border-t-2 border-primary'
+      : ''
+  }`}
+/>
+  </div> : <div className="mt-6"><EmptyState title="This shelf is empty" description="Add songs from the All Songs options menu to bring this playlist to life." icon={ListMusic}/></div>}</div>
 
 {artworkOpen && <ArtworkUploadDialog
   title={playlist.artwork ? 'Change playlist artwork' : 'Add playlist artwork'}
