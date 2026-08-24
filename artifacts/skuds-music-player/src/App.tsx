@@ -1574,13 +1574,39 @@ function PlaylistCard({ playlist, index, onOpen, onDelete }: { playlist: StoredP
 function PlaylistDetail({ playlist, songs, onBack, onRename, onDelete }: { playlist: StoredPlaylist; songs: StoredSong[]; onBack: () => void; onRename: () => void; onDelete: () => void }) {
   const library = useLibraryContext();
   const [menuId, setMenuId] = useState<string | null>(null);
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [artworkOpen, setArtworkOpen] = useState(false);
   const [playlistSong, setPlaylistSong] = useState<StoredSong | null>(null);
 const [infoSong, setInfoSong] = useState<StoredSong | null>(null);
 const [editSong, setEditSong] = useState<StoredSong | null>(null);
 
   const move = async (index: number, direction: -1 | 1) => { const nextIndex = index + direction; if (nextIndex < 0 || nextIndex >= songs.length) return; const ids = [...playlist.songIds]; const [item] = ids.splice(index, 1); ids.splice(nextIndex, 0, item); await library.updatePlaylist({ ...playlist, songIds: ids, updatedAt: Date.now() }); };
-  return <><div><button type="button" onClick={onBack} className="button-ghost mb-6 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"><ArrowLeft size={16}/> Back to playlists</button><div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-[#13231a] p-6 sm:flex-row sm:items-end sm:p-8"><PlaylistArtwork playlist={playlist} className="h-28 w-28 shrink-0 rounded-2xl"/><div className="min-w-0 flex-1"><div className="text-xs font-bold uppercase tracking-[.18em] text-primary">Playlist</div><h2 className="mt-2 truncate font-display text-3xl font-semibold">{playlist.name}</h2><p className="mt-2 text-sm text-muted-foreground">{songs.length} {songs.length === 1 ? 'track' : 'tracks'} in this shelf</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => songs[0] && library.playSong(songs[0].id, songs.map((song) => song.id))} disabled={!songs.length} className="button-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play all</button><button type="button" onClick={() => { if (!songs[0]) return; library.setShuffle(true); library.playSong(songs[0].id, songs.map((song) => song.id)); }} disabled={!songs.length} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold"><Shuffle size={16}/> Shuffle</button><button type="button" onClick={() => setArtworkOpen(true)} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold"><Upload size={15}/> {playlist.artwork ? 'Change artwork' : 'Change playlist artwork'}</button><IconButton label="Rename playlist" onClick={onRename}><Pencil size={16}/></IconButton><IconButton label="Delete playlist" onClick={onDelete}><Trash2 size={16}/></IconButton></div></div>{songs.length ? <div className="mt-6 overflow-visible rounded-2xl border border-border bg-card/70">{songs.map((song, index) => <div key={song.id} className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 ${menuId === song.id ? 'z-30' : 'z-0'}`}>
+  return <><div><button type="button" onClick={onBack} className="button-ghost mb-6 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"><ArrowLeft size={16}/> Back to playlists</button><div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-[#13231a] p-6 sm:flex-row sm:items-end sm:p-8"><PlaylistArtwork playlist={playlist} className="h-28 w-28 shrink-0 rounded-2xl"/><div className="min-w-0 flex-1"><div className="text-xs font-bold uppercase tracking-[.18em] text-primary">Playlist</div><h2 className="mt-2 truncate font-display text-3xl font-semibold">{playlist.name}</h2><p className="mt-2 text-sm text-muted-foreground">{songs.length} {songs.length === 1 ? 'track' : 'tracks'} in this shelf</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => songs[0] && library.playSong(songs[0].id, songs.map((song) => song.id))} disabled={!songs.length} className="button-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play all</button><button type="button" onClick={() => { if (!songs[0]) return; library.setShuffle(true); library.playSong(songs[0].id, songs.map((song) => song.id)); }} disabled={!songs.length} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold"><Shuffle size={16}/> Shuffle</button><button type="button" onClick={() => setArtworkOpen(true)} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold"><Upload size={15}/> {playlist.artwork ? 'Change artwork' : 'Change playlist artwork'}</button><IconButton label="Rename playlist" onClick={onRename}><Pencil size={16}/></IconButton><IconButton label="Delete playlist" onClick={onDelete}><Trash2 size={16}/></IconButton></div></div>{songs.length ? <div className="mt-6 overflow-visible rounded-2xl border border-border bg-card/70">{songs.map((song, index) => <div
+  key={song.id}
+  draggable
+  onDragStart={() => setDragIndex(index)}
+  onDragOver={(event) => event.preventDefault()}
+  onDrop={async () => {
+    if (dragIndex === null || dragIndex === index) return;
+
+    const ids = [...playlist.songIds];
+    const [moved] = ids.splice(dragIndex, 1);
+    ids.splice(index, 0, moved);
+
+    setDragIndex(null);
+
+    await library.updatePlaylist({
+      ...playlist,
+      songIds: ids,
+      updatedAt: Date.now(),
+    });
+  }}
+  onDragEnd={() => setDragIndex(null)}
+  className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 cursor-grab active:cursor-grabbing ${
+    dragIndex === index ? 'opacity-40' : ''
+  } ${menuId === song.id ? 'z-30' : 'z-0'}`}
+>
 <span className="w-5 text-center font-mono text-xs text-muted-foreground">{index + 1}</span><button type="button" onClick={() => library.playSong(song.id, songs.map((item) => item.id))} className="flex min-w-0 flex-1 items-center gap-3 text-left"><Artwork song={song} size="sm"/><span className="min-w-0"><span className={`block truncate text-sm font-semibold ${library.currentId === song.id && library.isPlaying ? 'text-primary' : 'text-foreground'}`}>{song.title}</span><span className="block truncate text-xs text-muted-foreground">{song.artist}</span></span></button><span className="hidden font-mono text-xs text-muted-foreground sm:block">{formatTime(song.duration)}</span><div className="flex"><IconButton label={`Move ${song.title} up`} onClick={() => void move(index, -1)} disabled={index === 0}><ArrowLeft size={14} className="rotate-90"/></IconButton><IconButton label={`Move ${song.title} down`} onClick={() => void move(index, 1)} disabled={index === songs.length - 1}><ArrowRight size={14} className="rotate-90"/></IconButton><div
   className="relative z-50 pointer-events-auto"
   data-track-menu-anchor={song.id}
