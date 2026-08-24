@@ -1627,24 +1627,7 @@ onDrop={async () => {
     updatedAt: Date.now(),
   });
 }}
-    if (dragIndex === null || dragIndex === index) {
-      setDragIndex(null);
-      setDragOverIndex(null);
-      return;
-    }
-
-    const ids = [...playlist.songIds];
-    const [moved] = ids.splice(dragIndex, 1);
-    ids.splice(index, 0, moved);
-
-    setDragIndex(null);
-    setDragOverIndex(null);
-
-    await library.updatePlaylist({
-      ...playlist,
-      songIds: ids,
-      updatedAt: Date.now(),
-    });
+   ;
   }}
   className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 ${
     dragIndex === index ? 'opacity-40' : ''
