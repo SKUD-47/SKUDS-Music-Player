@@ -1603,12 +1603,10 @@ const [editSong, setEditSong] = useState<StoredSong | null>(null);
     setDragOverIndex(null);
   }}
   className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 cursor-grab active:cursor-grabbing ${
-    dragIndex === index ? 'opacity-40' : ''
-  } ${
-    dragOverIndex === index && dragIndex !== index
-      ? 'border-t-2 border-primary'
-      : ''
-  } ${menuId === song.id ? 'z-30' : 'z-0'}`}
+  dragIndex === index ? 'opacity-40' : ''
+} ${dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-primary' : ''} ${
+  menuId === song.id ? 'z-30' : 'z-0'
+}`}
 >
   onDragEnd={() => setDragIndex(null)}
   className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 cursor-grab active:cursor-grabbing ${
