@@ -1176,13 +1176,13 @@ function TrackList({
   useEffect(() => {
     if (!activeMenuId) return;
 
-    const closeOutside = (event: PointerEvent) => {
-      const target = event.target as HTMLElement;
+ const closeOutside = (event: PointerEvent) => {
+  const target = event.target as HTMLElement;
 
-      if (!target.closest("[data-track-menu]")) {
-        updateMenu(null);
-      }
-    };
+  if (!target.closest("[data-track-menu]") && !target.closest("[data-track-menu-anchor]")) {
+    updateMenu(null);
+  }
+};
 
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
