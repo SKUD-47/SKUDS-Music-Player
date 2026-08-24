@@ -1627,7 +1627,7 @@ onDrop={async () => {
     updatedAt: Date.now(),
   });
 }}
-   ;
+   
   }}
   className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 ${
     dragIndex === index ? 'opacity-40' : ''
