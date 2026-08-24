@@ -1194,52 +1194,66 @@ function TrackMenu({
   onRemove?: () => void;
   removeLabel?: string;
 }) {
-const library = useLibraryContext();
-const [openUp, setOpenUp] = useState(false);
-useEffect(() => {
-  const updatePosition = () => {
+  const library = useLibraryContext();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [openUp, setOpenUp] = useState(false);
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
     const anchor = document.querySelector(
       `[data-track-menu-anchor="${song.id}"]`
     );
 
-    if (!(anchor instanceof HTMLElement)) return;
+    if (!(anchor instanceof HTMLElement) || !menu) return;
 
-    const rect = anchor.getBoundingClientRect();
+    const updatePosition = () => {
+      const anchorRect = anchor.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
 
-    // The menu is roughly 250px tall.
-    const menuHeight = 250;
-    const gap = 8;
+      const gap = 8;
 
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
+      const spaceAbove = anchorRect.top;
+      const spaceBelow = window.innerHeight - anchorRect.bottom;
 
-    setOpenUp(
-      spaceBelow < menuHeight + gap &&
-      spaceAbove > spaceBelow
-    );
-  };
+      const fitsBelow = spaceBelow >= menuRect.height + gap;
+      const fitsAbove = spaceAbove >= menuRect.height + gap;
 
-  requestAnimationFrame(updatePosition);
+      if (fitsBelow) {
+        setOpenUp(false);
+      } else if (fitsAbove) {
+        setOpenUp(true);
+      } else {
+        // If it cannot completely fit either direction,
+        // choose whichever side has more room.
+        setOpenUp(spaceAbove > spaceBelow);
+      }
+    };
 
-  window.addEventListener("resize", updatePosition);
-  window.addEventListener("scroll", updatePosition, true);
+    // Let the browser finish rendering the menu before measuring it.
+    const frame = requestAnimationFrame(updatePosition);
 
-  return () => {
-    window.removeEventListener("resize", updatePosition);
-    window.removeEventListener("scroll", updatePosition, true);
-  };
-}, [song.id]);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [song.id]);
+
   return (
-   <div
-  data-track-menu
-  onPointerDown={(event) => event.stopPropagation()}
-  onClick={(event) => event.stopPropagation()}
-  className={`absolute right-0 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl ${
-    openUp
-      ? "bottom-full mb-1.5"
-      : "top-full mt-1.5"
-  }`}
->
+    <div
+      ref={menuRef}
+      data-track-menu
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      className={`absolute right-0 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl ${
+        openUp
+          ? "bottom-full mb-1.5"
+          : "top-full mt-1.5"
+      }`}
+    >
       <button
         type="button"
         onClick={() => {
@@ -1308,6 +1322,7 @@ useEffect(() => {
           } else {
             void library.removeSong(song.id);
           }
+
           onClose();
         }}
         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"
