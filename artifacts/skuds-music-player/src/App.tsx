@@ -1572,12 +1572,12 @@ function PlaylistCard({ playlist, index, onOpen, onDelete }: { playlist: StoredP
 }
 
 function PlaylistDetail({ playlist, songs, onBack, onRename, onDelete }: { playlist: StoredPlaylist; songs: StoredSong[]; onBack: () => void; onRename: () => void; onDelete: () => void }) {
-  const library = useLibraryContext();
-  const [menuId, setMenuId] = useState<string | null>(null);
-    const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [artworkOpen, setArtworkOpen] = useState(false);
-  const [playlistSong, setPlaylistSong] = useState<StoredSong | null>(null);
+const library = useLibraryContext();
+const [menuId, setMenuId] = useState<string | null>(null);
+const [dragIndex, setDragIndex] = useState<number | null>(null);
+const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+const [artworkOpen, setArtworkOpen] = useState(false);
+const [playlistSong, setPlaylistSong] = useState<StoredSong | null>(null);
 const [infoSong, setInfoSong] = useState<StoredSong | null>(null);
 const [editSong, setEditSong] = useState<StoredSong | null>(null);
 
@@ -1585,23 +1585,31 @@ const [editSong, setEditSong] = useState<StoredSong | null>(null);
   return <><div><button type="button" onClick={onBack} className="button-ghost mb-6 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm"><ArrowLeft size={16}/> Back to playlists</button><div className="flex flex-col gap-5 rounded-3xl border border-primary/15 bg-[#13231a] p-6 sm:flex-row sm:items-end sm:p-8"><PlaylistArtwork playlist={playlist} className="h-28 w-28 shrink-0 rounded-2xl"/><div className="min-w-0 flex-1"><div className="text-xs font-bold uppercase tracking-[.18em] text-primary">Playlist</div><h2 className="mt-2 truncate font-display text-3xl font-semibold">{playlist.name}</h2><p className="mt-2 text-sm text-muted-foreground">{songs.length} {songs.length === 1 ? 'track' : 'tracks'} in this shelf</p></div><div className="flex flex-wrap items-center gap-2"><button type="button" onClick={() => songs[0] && library.playSong(songs[0].id, songs.map((song) => song.id))} disabled={!songs.length} className="button-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"><Play size={16} fill="currentColor"/> Play all</button><button type="button" onClick={() => { if (!songs[0]) return; library.setShuffle(true); library.playSong(songs[0].id, songs.map((song) => song.id)); }} disabled={!songs.length} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold"><Shuffle size={16}/> Shuffle</button><button type="button" onClick={() => setArtworkOpen(true)} className="button-ghost inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-semibold"><Upload size={15}/> {playlist.artwork ? 'Change artwork' : 'Change playlist artwork'}</button><IconButton label="Rename playlist" onClick={onRename}><Pencil size={16}/></IconButton><IconButton label="Delete playlist" onClick={onDelete}><Trash2 size={16}/></IconButton></div></div>{songs.length ? <div className="mt-6 overflow-visible rounded-2xl border border-border bg-card/70">{songs.map((song, index) => <div
   key={song.id}
   draggable
-  onDragStart={() => setDragIndex(index)}
-  onDragOver={(event) => event.preventDefault()}
-  onDrop={async () => {
-    if (dragIndex === null || dragIndex === index) return;
-
-    const ids = [...playlist.songIds];
-    const [moved] = ids.splice(dragIndex, 1);
-    ids.splice(index, 0, moved);
-
-    setDragIndex(null);
-
-    await library.updatePlaylist({
-      ...playlist,
-      songIds: ids,
-      updatedAt: Date.now(),
-    });
+  onDragStart={() => {
+    setDragIndex(index);
   }}
+  onDragOver={(event) => {
+    event.preventDefault();
+    setDragOverIndex(index);
+  }}
+  onDragLeave={() => {
+    setDragOverIndex(null);
+  }}
+  onDrop={async () => {
+    // ...
+  }}
+  onDragEnd={() => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }}
+  className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 cursor-grab active:cursor-grabbing ${
+    dragIndex === index ? 'opacity-40' : ''
+  } ${
+    dragOverIndex === index && dragIndex !== index
+      ? 'border-t-2 border-primary'
+      : ''
+  } ${menuId === song.id ? 'z-30' : 'z-0'}`}
+>
   onDragEnd={() => setDragIndex(null)}
   className={`list-row relative overflow-visible flex items-center gap-3 border-b border-border/70 px-3 py-2.5 last:border-0 sm:px-4 cursor-grab active:cursor-grabbing ${
     dragIndex === index ? 'opacity-40' : ''
