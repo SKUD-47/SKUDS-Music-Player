@@ -1194,8 +1194,8 @@ function TrackMenu({
   onRemove?: () => void;
   removeLabel?: string;
 }) {
-  const library = const [openUp, setOpenUp] = useState(false);
-
+const library = useLibraryContext();
+const [openUp, setOpenUp] = useState(false);
 useEffect(() => {
   const updatePosition = () => {
     const anchor = document.querySelector(
