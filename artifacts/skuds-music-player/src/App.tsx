@@ -896,8 +896,7 @@ function BottomPlayer({ sidebarCollapsed = false }: { sidebarCollapsed?: boolean
   const [expanded, setExpanded] = useState(false);
   const [showMetadata, setShowMetadata] = useState(false);
   const max = library.duration || current?.duration || 1;
-  return <><div className={`fixed bottom-0 left-0 right-0 z-40 border-t border-primary/15 bg-[#0b1610]/95 shadow-[0_-12px_40px_rgba(0,0,0,.25)] backdrop-blur-xl ${sidebarCollapsed ? 'md:left-[76px]' : 'md:left-[248px]'}`}><div className="mx-auto max-w-[1500px] px-3 py-2 sm:px-6"><div className="flex items-center gap-3"><div className="flex min-w-0 flex-1 items-center gap-3"><Artwork song={current} size="sm"/><div className="min-w-0 player-desktop-details"><div className="truncate text-sm font-semibold">{current?.title ?? 'Choose a track to begin'}</div><div className="truncate text-xs text-muted-foreground">{current?.artist ?? 'Your private library awaits'}</div><Visualizer analyser={library.visualizer} active={library.isPlaying}/></div></div><div className="flex items-center gap-0.5 sm:gap-2"><IconButton label="Previous track" onClick={library.previous} disabled={!current}><SkipBack size={17}/></IconButton><button type="button" aria-label={library.isPlaying ? 'Pause' : 'Play'} data-testid="button-player-play" onClick={library.togglePlay} className="green-glow flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105">{library.isPlaying ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor" className="ml-0.5"/>}</button><IconButton label="Next track" onClick={library.next} disabled={!current}><SkipForward size={17}/></IconButton></div><div className="hidden min-w-[210px] flex-1 items-center justify-end gap-3 sm:flex"><IconButton label="Shuffle" onClick={() => library.setShuffle(!library.shuffle)} active={library.shuffle}><Shuffle size={16}/></IconButton><IconButton label={`Repeat ${library.repeat}`} onClick={library.cycleRepeat} active={library.repeat !== 'off'}>{library.repeat === 'one' ? <Repeat1 size={16}/> : <Repeat size={16}/>}</IconButton><IconButton
-  label="Open queue"
+return <><div data-player-bar className={`fixed bottom-0 left-0 right-0 z-40 border-t border-primary/15 bg-[#0b1610]/95 shadow-[0_-12px_40px_rgba(0,0,0,.25)] backdrop-blur-xl ${sidebarCollapsed ? 'md:left-[76px]' : 'md:left-[248px]'}`}><div className="mx-auto max-w-[1500px] px-3 py-2 sm:px-6"><div className="flex items-center gap-3"><div className="flex min-w-0 flex-1 items-center gap-3"><Artwork song={current} size="sm"/><div className="min-w-0 player-desktop-details"><div className="truncate text-sm font-semibold">{current?.title ?? 'Choose a track to begin'}</div><div className="truncate text-xs text-muted-foreground">{current?.artist ?? 'Your private library awaits'}</div><Visualizer analyser={library.visualizer} active={library.isPlaying}/></div></div><div className="flex items-center gap-0.5 sm:gap-2"><IconButton label="Previous track" onClick={library.previous} disabled={!current}><SkipBack size={17}/></IconButton><button type="button" aria-label={library.isPlaying ? 'Pause' : 'Play'} data-testid="button-player-play" onClick={library.togglePlay} className="green-glow flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform hover:scale-105">{library.isPlaying ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor" className="ml-0.5"/>}</button><IconButton label="Next track" onClick={library.next} disabled={!current}><SkipForward size={17}/></IconButton></div><div className="hidden min-w-[210px] flex-1 items-center justify-end gap-3 sm:flex"><IconButton label="Shuffle" onClick={() => library.setShuffle(!library.shuffle)} active={library.shuffle}><Shuffle size={16}/></IconButton><IconButton label={`Repeat ${library.repeat}`} onClick={library.cycleRepeat} active={library.repeat !== 'off'}>{library.repeat === 'one' ? <Repeat1 size={16}/> : <Repeat size={16}/>}</IconButton><IconButton  label="Open queue"
   onClick={() => library.setShowQueue(true)}
   active={library.showQueue}
 >
@@ -1381,11 +1380,22 @@ function TrackMenu({
 
       const gap = 8;
 
-      const spaceAbove = anchorRect.top;
-      const spaceBelow = window.innerHeight - anchorRect.bottom;
+    const spaceAbove = anchorRect.top;
 
-      const fitsBelow = spaceBelow >= menuRect.height + gap;
-      const fitsAbove = spaceAbove >= menuRect.height + gap;
+// Leave room for the fixed music player at the bottom.
+const player = document.querySelector(
+  '[data-player-bar]'
+);
+
+const playerTop =
+  player instanceof HTMLElement
+    ? player.getBoundingClientRect().top
+    : window.innerHeight;
+
+const spaceBelow = playerTop - anchorRect.bottom;
+
+const fitsBelow = spaceBelow >= menuRect.height + gap;
+const fitsAbove = spaceAbove >= menuRect.height + gap;
 
       if (fitsBelow) {
         setOpenUp(false);
