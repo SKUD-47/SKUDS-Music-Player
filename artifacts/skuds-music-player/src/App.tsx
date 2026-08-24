@@ -1195,7 +1195,126 @@ function TrackMenu({
   removeLabel?: string;
 }) {
   const library = useLibraryContext();
-return <div data-track-menu onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()} className="absolute right-0 ${openUp ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl"><button type="button" onClick={() => { library.playSong(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Play size={14}/> Play now</button><button type="button" onClick={() => { library.addQueue(song.id); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><ListMusic size={14}/> Add to queue</button><button type="button" onClick={() => { onAddPlaylist(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Plus size={14}/> Add to playlist</button><button type="button" onClick={() => { onInfo(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Info size={14}/> Song info</button><button type="button" onClick={() => { onEdit(); onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"><Pencil size={14}/> Edit song</button><button type="button" onClick={() => { if (onRemove) { onRemove(); } else { void library.removeSong(song.id); } onClose(); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"><Trash2 size={14}/> {removeLabel}</button></div>;
+
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [openUp, setOpenUp] = useState(false);
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+
+    const updatePosition = () => {
+      const rect = menu.getBoundingClientRect();
+
+      const spaceBelow = window.innerHeight - rect.top;
+      const spaceAbove = rect.bottom;
+
+      setOpenUp(
+        spaceBelow < rect.height + 12 &&
+        spaceAbove > spaceBelow
+      );
+    };
+
+    updatePosition();
+
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={menuRef}
+      data-track-menu
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+      className={`absolute right-0 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl ${
+        openUp
+          ? "bottom-full mb-1.5"
+          : "top-full mt-1.5"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => {
+          library.playSong(song.id);
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"
+      >
+        <Play size={14} />
+        Play now
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          library.addQueue(song.id);
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"
+      >
+        <ListMusic size={14} />
+        Add to queue
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          onAddPlaylist();
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"
+      >
+        <Plus size={14} />
+        Add to playlist
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          onInfo();
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"
+      >
+        <Info size={14} />
+        Song info
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          onEdit();
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted"
+      >
+        <Pencil size={14} />
+        Edit song
+      </button>
+
+      <button
+        type="button"
+        onClick={() => {
+          if (onRemove) {
+            onRemove();
+          } else {
+            void library.removeSong(song.id);
+          }
+          onClose();
+        }}
+        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-destructive hover:bg-destructive/10"
+      >
+        <Trash2 size={14} />
+        {removeLabel}
+      </button>
+    </div>
+  );
 }
 
 function FavoritesPage() {
