@@ -1194,38 +1194,35 @@ function TrackMenu({
   onRemove?: () => void;
   removeLabel?: string;
 }) {
-  const library = useLibraryContext();
+  const library = useLayoutEffect(() => {
+  const menu = menuRef.current;
+  if (!menu) return;
 
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [openUp, setOpenUp] = useState(false);
+  const updatePosition = () => {
+    const rect = menu.getBoundingClientRect();
+    const padding = 12;
 
-  useLayoutEffect(() => {
-    const menu = menuRef.current;
-    if (!menu) return;
+    const spaceAbove = rect.top;
+    const spaceBelow = window.innerHeight - rect.bottom;
 
-    const updatePosition = () => {
-      const rect = menu.getBoundingClientRect();
+    const shouldOpenUp =
+      spaceBelow < rect.height + padding &&
+      spaceAbove > rect.height + padding;
 
-      const spaceBelow = window.innerHeight - rect.top;
-      const spaceAbove = rect.bottom;
+    setOpenUp(shouldOpenUp);
+  };
 
-      setOpenUp(
-        spaceBelow < rect.height + 12 &&
-        spaceAbove > spaceBelow
-      );
-    };
+  // Wait one frame so the menu has its final dimensions.
+  requestAnimationFrame(updatePosition);
 
-    updatePosition();
+  window.addEventListener("resize", updatePosition);
+  window.addEventListener("scroll", updatePosition, true);
 
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-    };
-  }, []);
-
+  return () => {
+    window.removeEventListener("resize", updatePosition);
+    window.removeEventListener("scroll", updatePosition, true);
+  };
+}, []);
   return (
     <div
       ref={menuRef}
