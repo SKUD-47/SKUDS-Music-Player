@@ -1194,25 +1194,31 @@ function TrackMenu({
   onRemove?: () => void;
   removeLabel?: string;
 }) {
-  const library = useLayoutEffect(() => {
-  const menu = menuRef.current;
-  if (!menu) return;
+  const library = const [openUp, setOpenUp] = useState(false);
 
+useEffect(() => {
   const updatePosition = () => {
-    const rect = menu.getBoundingClientRect();
-    const padding = 12;
+    const anchor = document.querySelector(
+      `[data-track-menu-anchor="${song.id}"]`
+    );
 
-    const spaceAbove = rect.top;
+    if (!(anchor instanceof HTMLElement)) return;
+
+    const rect = anchor.getBoundingClientRect();
+
+    // The menu is roughly 250px tall.
+    const menuHeight = 250;
+    const gap = 8;
+
     const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
 
-    const shouldOpenUp =
-      spaceBelow < rect.height + padding &&
-      spaceAbove > rect.height + padding;
-
-    setOpenUp(shouldOpenUp);
+    setOpenUp(
+      spaceBelow < menuHeight + gap &&
+      spaceAbove > spaceBelow
+    );
   };
 
-  // Wait one frame so the menu has its final dimensions.
   requestAnimationFrame(updatePosition);
 
   window.addEventListener("resize", updatePosition);
@@ -1222,19 +1228,18 @@ function TrackMenu({
     window.removeEventListener("resize", updatePosition);
     window.removeEventListener("scroll", updatePosition, true);
   };
-}, []);
+}, [song.id]);
   return (
-    <div
-      ref={menuRef}
-      data-track-menu
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-      className={`absolute right-0 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl ${
-        openUp
-          ? "bottom-full mb-1.5"
-          : "top-full mt-1.5"
-      }`}
-    >
+   <div
+  data-track-menu
+  onPointerDown={(event) => event.stopPropagation()}
+  onClick={(event) => event.stopPropagation()}
+  className={`absolute right-0 z-40 w-48 rounded-xl border border-border bg-popover p-1.5 shadow-2xl ${
+    openUp
+      ? "bottom-full mb-1.5"
+      : "top-full mt-1.5"
+  }`}
+>
       <button
         type="button"
         onClick={() => {
@@ -1469,7 +1474,7 @@ function PlaylistDialog({ title, initial, onClose, onSubmit }: { title: string; 
 
 function AddToPlaylistDialog({ song, onClose }: { song: StoredSong; onClose: () => void }) {
   const library = useLibraryContext();
-  const menuRef = useRef<HTMLDivElement>(null);
+const menuRef = useRef<HTMLDivElement>(null);
 const [openUp, setOpenUp] = useState(false);
 
 useEffect(() => {
