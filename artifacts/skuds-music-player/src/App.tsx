@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useLayoutEffect, useRef, useState } from 'react';
 import {
   AlertCircle, Archive, ArrowLeft, ArrowRight, Check, ChevronRight, ChevronUp, CircleHelp, Disc3, Download, FileAudio, FolderOpen, Heart, Home as HomeIcon,
   CalendarDays, Clock3, FileText, Hash, Info, Library, ListMusic, Menu, MoreHorizontal, Pause, Pencil, Play, Plus, Repeat, Repeat1, Search,
